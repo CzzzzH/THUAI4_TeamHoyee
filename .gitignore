@@ -1,2 +1,8 @@
 /include/
 /lib/
+so
+a
+library
+*.o
+PLAYER
+*.d
