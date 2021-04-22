@@ -219,7 +219,6 @@ std::list<unsigned char> searchWayFromMap(
 			break;
 		result.push_front(route[end[0]][end[1]]);
 		end = end - operate[route[end[0]][end[1]]];
-		// std::cout << "(" << end[0] << "," << end[1] << ")  :  " << (int)colorMap[end[0]][end[1]] << std::endl;
 	}
 	return result;
 }
@@ -233,7 +232,52 @@ namespace
 	[[maybe_unused]] std::uniform_real_distribution<double> direction(0, 2 * 3.1415926);
 	[[maybe_unused]] std::default_random_engine e{std::random_device{}()};
 }
-std::array<int, 2> target = {40, 25};
+std::array<int, 2> target = {48, 25};
+
+void refreshColorMap(const GameApi &g)
+{
+	for (int i = 0; i < LENGTH; i++)
+	{
+		for (int j = 0; j < LENGTH; j++)
+		{
+			if (g.GetCellColor(i, j) == THUAI4::ColorType::Invisible)
+				continue;
+			if (g.GetCellColor(i, j) == THUAI4::ColorType::None)
+			{
+				colorMap[i][j] = 0;
+			}
+			else if (g.GetCellColor(i, j) == g.GetSelfTeamColor())
+				colorMap[i][j] = -1;
+			else
+				colorMap[i][j] = 1;
+		}
+	}
+}
+
+std::unordered_map<int64_t, THUAI4::Character> players;
+void refreshPlayers(GameApi &g)
+{
+	auto new_players = g.GetCharacters();
+	for (auto p : new_players)
+	{
+		if (players.find(p->guid) != players.end())
+			players.erase(p->guid);
+		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
+	}
+}
+
+std::unordered_map<int64_t, THUAI4::Prop> props;
+void refreshProps(GameApi &g)
+{
+	auto new_props = g.GetProps();
+	for (auto p : new_props)
+	{
+		if (props.find(p->guid) != props.end())
+			props.erase(p->guid);
+		props.insert(std::make_pair(p->guid, THUAI4::Prop(*p)));
+	}
+}
+
 void AI::play(GameApi &g)
 {
 	auto self = g.GetSelfInfo();
@@ -242,19 +286,16 @@ void AI::play(GameApi &g)
 	{
 		g.Attack(100, 0);
 	}
+	refreshColorMap(g);
+	refreshPlayers(g);
+	refreshProps(g);
+
 	dijkstra({(int)self->x / 1000, (int)self->y / 1000});
 	auto l = searchWayFromMap({(int)self->x / 1000, (int)self->y / 1000}, target);
 	double angle = *l.begin() * M_PI / 4;
 	std::cout << "angle : " << angle << "\n";
 	g.MovePlayer(50, angle);
 	// g.MovePlayer(50, 1);
-	for (int i = 0; i < 50; i++)
-	{
-		for (int j = 0; j < 50; j++)
-		{
-			g.GetCellColor(i, j);
-		}
-	}
 	std::cout << "I`m at (" << self->x << "," << self->y << ")." << std::endl;
 	// sleep(0.5);
 	usleep(100000);
