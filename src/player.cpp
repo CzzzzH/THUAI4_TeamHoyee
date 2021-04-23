@@ -231,23 +231,89 @@ inline int GridToCord(int value)
 /*                                      */
 /****************************************/
 
-void dijkstra(const std::array<int, 2>& point)
+void dijkstra(const std::array<int, 2> &point)
 {
-	memset(route, 0, sizeof(route));
+	memset(route, 8, sizeof(route));
 	memset(colorValueMap, 0, sizeof(colorValueMap));
 	// std::cout << sizeof(route) << std::endl;
 	__gnu_pbds::priority_queue<frontier_node, std::greater<frontier_node>> frontier;
+	double distance_table[LENGTH][LENGTH];
 	memset(distance_table, -1, sizeof(distance_table));
+	bool dont_search[LENGTH][LENGTH];
 	memset(dont_search, 0, sizeof(dont_search));
 
-	frontier.push(frontier_node{ 0, point });
-	distance_table[point[0]][point[1]] = 0;
-	colorValueMap[point[0]][point[1]] = colorMap[point[0]][point[1]];
+	std::array<int, 2> int_part = {int(point[0] / 1000), int(point[1] / 1000)};
+	std::array<int, 2> decimal_part = {point[0] % 1000, point[1] % 1000};
+
+	dont_search[int_part[0]][int_part[1]] = 1;
+	// frontier.push(frontier_node{0, int_part});
+	distance_table[int_part[0]][int_part[1]] = 0;
+	colorValueMap[int_part[0]][int_part[1]] = colorMap[int_part[0]][int_part[1]];
+
+	bool avaiable[8];
+	{
+		std::array<int, 2UL> p[8];
+		for (int i = 0; i < 8; ++i)
+			p[i] = int_part + operate[i];
+		memset(avaiable, 1, sizeof(avaiable));
+		for (int i = 0; i < 8; i++)
+		{
+			if (defaultMap[p[i][0]][p[i][1]])
+			{
+				// std::cout << "setting unavaiable : " << i << std::endl;
+				avaiable[i] = 0;
+				if (!(i % 2))
+				{
+					avaiable[(i + 8 - 1) % 8] = 0;
+					avaiable[(i + 1) % 8] = 0;
+				}
+			}
+		}
+		if (decimal_part[1] < 500)
+		{
+			if (defaultMap[p[5][0]][p[5][1]])
+				avaiable[4] = 0;
+			if (defaultMap[p[7][0]][p[7][1]])
+				avaiable[0] = 0;
+		}
+		else if (decimal_part[1] > 500)
+		{
+			if (defaultMap[p[3][0]][p[3][1]])
+				avaiable[4] = 0;
+			if (defaultMap[p[1][0]][p[1][1]])
+				avaiable[0] = 0;
+		}
+		if (decimal_part[0] < 500)
+		{
+			if (defaultMap[p[3][0]][p[3][1]])
+				avaiable[2] = 0;
+			if (defaultMap[p[5][0]][p[5][1]])
+				avaiable[6] = 0;
+		}
+		else if (decimal_part[0] > 500)
+		{
+			if (defaultMap[p[1][0]][p[1][1]])
+				avaiable[2] = 0;
+			if (defaultMap[p[7][0]][p[7][1]])
+				avaiable[6] = 0;
+		}
+		for (int i = 0; i < 8; ++i)
+		{
+			if (!avaiable[i])
+				continue;
+			auto p = int_part + operate[i];
+			double distance = i % 2 ? sqrt(2) : 1;
+			frontier.push(frontier_node{distance, p});
+			distance_table[p[0]][p[1]] = distance;
+			colorValueMap[p[0]][p[1]] = colorMap[p[0]][p[1]];
+			route[p[0]][p[1]] = i;
+		}
+	}
 	while (1)
 	{
 		if (frontier.empty())
 		{
-			// std::cout << "frontier is empty" << std::endl;
+			std::cout << "frontier is empty" << std::endl;
 			break;
 		}
 		auto searching_point = frontier.top().position;
@@ -257,7 +323,6 @@ void dijkstra(const std::array<int, 2>& point)
 		auto color = colorValueMap[searching_point[0]][searching_point[1]];
 		// std::cout << "distance :  " << distance << std::endl;
 		dont_search[searching_point[0]][searching_point[1]] = 1;
-		bool avaiable[8];
 		memset(avaiable, 1, sizeof(avaiable));
 		for (int i = 0; i < 8; i += 2)
 		{
@@ -277,8 +342,6 @@ void dijkstra(const std::array<int, 2>& point)
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
-				avaiable[(i + 8 - 1) % 8] = 0;
-				avaiable[(i + 1) % 8] = 0;
 			}
 		}
 		for (int i = 0; i < 8; ++i)
@@ -300,9 +363,9 @@ void dijkstra(const std::array<int, 2>& point)
 			}
 			// std::cout << "updating distance : " << distance + neighbor_distance << std::endl;
 			if (iter == frontier.end())
-				frontier.push(frontier_node{ distance + neighbor_distance, p });
+				frontier.push(frontier_node{distance + neighbor_distance, p});
 			else
-				frontier.modify(iter, frontier_node{ distance + neighbor_distance, p });
+				frontier.modify(iter, frontier_node{distance + neighbor_distance, p});
 			distance_table[p[0]][p[1]] = distance + neighbor_distance;
 			colorValueMap[p[0]][p[1]] = color + colorMap[p[0]][p[1]];
 			route[p[0]][p[1]] = i;
@@ -315,6 +378,8 @@ std::list<unsigned char> searchWayFromMap(
 	std::array<int, 2> start, std::array<int, 2> end,
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
 {
+	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
+	// std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
 	std::list<unsigned char> result;
 	while (1)
 	{
@@ -322,7 +387,9 @@ std::list<unsigned char> searchWayFromMap(
 		if (end == start)
 			break;
 		result.push_front(route[end[0]][end[1]]);
+		// std::cout<<"ddd"<<std::endl;
 		end = end - operate[route[end[0]][end[1]]];
+		// std::cout<<"eee"<<std::endl;
 	}
 	return result;
 }
@@ -398,7 +465,7 @@ void updateInfo(GameApi& g)
 	refreshPlayers();
 	refreshProps();
     // std::cout << "Now Position: " << nowPosition[0] << " " << nowPosition[1] << std::endl;
-    dijkstra(nowPosition);
+    dijkstra({int(self->x), int(self->y)});
 }
 
 void updateEnd()
@@ -472,6 +539,11 @@ void attackAction()
     }
 }
 
+void checkBullet()
+{
+	
+}
+
 void correctPosition()
 {
     if (isAct) return;
@@ -497,7 +569,7 @@ Position findFarthestTarget()
     for (auto i = 0; i < 50; ++i)
         for (auto j = 0; j < 50; ++j)
         {
-            if (defaultMap[i][j] == 1) continue;
+            if (defaultMap[i][j]) continue;
             if (nowPosition[0] == i && nowPosition[1] == j) continue;
             Position newPosition = {i, j};
             bonus = - int(getGridDistance(nowTarget, {i, j}) * 0.5);
@@ -512,7 +584,7 @@ Position findFarthestTarget()
                 if (k == 2) break;
                 nextX += self->moveSpeed / 20. * cos(getMoveAngle(it));
                 nextY += self->moveSpeed / 20. * sin(getMoveAngle(it));
-                if (defaultMap[i][j] == 1 || colorMap[CordToGrid(nextX)][CordToGrid(nextY)] != 1)
+                if (defaultMap[i][j]|| colorMap[CordToGrid(nextX)][CordToGrid(nextY)] != 1)
                 {
                     flag = false;
                     break;
@@ -592,6 +664,7 @@ void AI::play(GameApi& g)
 {
     updateInfo(g);
     attackAction();
+	checkBullet();
     correctPosition();
     moveAction();
     updateEnd();
