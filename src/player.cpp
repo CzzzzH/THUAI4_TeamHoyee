@@ -11,8 +11,8 @@ extern const bool asynchronous = true;
 // #include "PolygonConvexPartition.h"
 // #include "map_poly.h"
 #include "math.h"
-#include <unistd.h>
 #include <iostream>
+#include <unistd.h>
 #include <ext/pb_ds/priority_queue.hpp>
 #include <unordered_set>
 // #include "MainWindow.h"
@@ -22,9 +22,46 @@ extern const bool asynchronous = true;
 #include <memory>
 #include <list>
 #include <string.h>
+#include <random>
 
+/****************************************/
+/*                                      */
+/*          Struct & Enum               */
+/*                                      */
+/****************************************/
+
+namespace
+{
+	[[maybe_unused]] std::uniform_real_distribution<double> direction(0, 2 * 3.1415926);
+	[[maybe_unused]] std::default_random_engine e{ std::random_device{}() };
+}
+
+typedef std::array<int, 2> Position;
+
+struct frontier_node
+{
+	double distance;
+	std::array<int, 2> position;
+	bool operator>(const frontier_node& n) const
+	{
+		return distance > n.distance;
+	}
+};
+
+enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
+enum Action {MOVE, ATTACK, PICK, WAIT};
+enum Job {LAZY_GOAT, MONKEY_DOCTOR, PURPLE_FISH};
+
+/****************************************/
+/*                                      */
+/*          Global Variables             */
+/*                                      */
+/****************************************/
+
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; //选手职业，选手 !!必须!! 定义此变量来选择职业
+
+const int ZOOM = 10;
 const int LENGTH = 50;
-
 static unsigned char defaultMap[LENGTH][LENGTH] = {
 	//0                             10                            20                            30                            40                         49
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, //0
@@ -82,33 +119,24 @@ static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //49
 };
-const int ZOOM = 10;
 
-std::array<int, 2> operator+(const std::array<int, 2> &p1, const std::array<int, 2> &p2)
-{
-	return std::array<int, 2>{p1[0] + p2[0], p1[1] + p2[1]};
-}
-std::array<int, 2> operator-(const std::array<int, 2> &p1, const std::array<int, 2> &p2)
-{
-	return std::array<int, 2>{p1[0] - p2[0], p1[1] - p2[1]};
-}
-std::array<int, 2> operator-(const std::array<int, 2> &p1)
-{
-	return std::array<int, 2>{-p1[0], -p1[1]};
-}
+std::unordered_map<int64_t, THUAI4::Character> players;
+std::unordered_map<int64_t, THUAI4::Prop> props;
 
-bool operator==(const std::array<int, 2UL> &p1, const std::array<int, 2UL> &p2)
-{
-	return p1[0] == p2[0] && p1[1] == p2[1];
-}
-double length(const std::array<int, 2> &p1)
-{
-	return sqrt(p1[0] * p1[0] + p1[1] * p1[1]);
-}
-
+static GameApi* gameInfo;
+static State currentState;
+static Action lastAction;
+static Job job;
 static unsigned char route[LENGTH][LENGTH];
+static double distance_table[LENGTH][LENGTH];
+static bool dont_search[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
+static int frame = 0;
+static int lastX, lastY;
+static bool isAct;
+
+Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
 
 const std::array<int, 2> operate[] = {
 	{1, 0},
@@ -118,35 +146,108 @@ const std::array<int, 2> operate[] = {
 	{-1, 0},
 	{-1, -1},
 	{0, -1},
-	{1, -1}};
-struct frontier_node
+	{1, -1} };
+
+/****************************************/
+/*                                      */
+/*        Overload Functions            */
+/*                                      */
+/****************************************/
+
+std::array<int, 2> operator+(const std::array<int, 2>& p1, const std::array<int, 2>& p2)
 {
-	double distance;
-	std::array<int, 2> position;
-	bool operator>(const frontier_node &n) const
-	{
-		return distance > n.distance;
-	}
-};
-void dijkstra(const std::array<int, 2> &point)
+	return std::array<int, 2>{p1[0] + p2[0], p1[1] + p2[1]};
+}
+std::array<int, 2> operator-(const std::array<int, 2>& p1, const std::array<int, 2>& p2)
+{
+	return std::array<int, 2>{p1[0] - p2[0], p1[1] - p2[1]};
+}
+std::array<int, 2> operator-(const std::array<int, 2>& p1)
+{
+	return std::array<int, 2>{-p1[0], -p1[1]};
+}
+
+bool operator==(const std::array<int, 2UL>& p1, const std::array<int, 2UL>& p2)
+{
+	return p1[0] == p2[0] && p1[1] == p2[1];
+}
+
+/****************************************/
+/*                                      */
+/*          Math Functions              */
+/*                                      */
+/****************************************/
+
+inline double length(const std::array<int, 2>& p1)
+{
+	return sqrt(p1[0] * p1[0] + p1[1] * p1[1]);
+}
+
+inline double getMoveAngle(std::list<unsigned char>::iterator it)
+{
+	return *it * M_PI / 4;
+}
+
+inline double getPointToPointAngle(double sourceX, double sourceY, double targetX, double targetY)
+{
+    double angleR = atan2(targetY - sourceY, targetX - sourceX);
+    if (angleR < 0) angleR += 2 * M_PI;
+    return angleR;
+}
+
+inline double getPointToPointDistance(double sourceX, double sourceY, double targetX, double targetY)
+{
+    return sqrt((sourceX - targetX) * (sourceX - targetX) + (sourceY - targetY) * (sourceY - targetY));
+}
+
+inline double getGridDistance(Position source, Position target)
+{
+    return sqrt((source[0] - target[0]) * (source[0] - target[0]) + (source[1] - target[1]) *(source[1] - target[1]));
+}
+
+inline double angleToRadian(double value)
+{
+	return value * M_PI / 180.;
+}
+
+inline double radianToAngle(double value)
+{
+	return value * 180. / M_PI;
+}
+
+inline int CordToGrid(double value)
+{
+    return int(value / 1000);
+}
+
+inline int GridToCord(int value)
+{
+    return value * 1000 + 500;
+}
+
+/****************************************/
+/*                                      */
+/*          Normal Function             */
+/*                                      */
+/****************************************/
+
+void dijkstra(const std::array<int, 2>& point)
 {
 	memset(route, 0, sizeof(route));
 	memset(colorValueMap, 0, sizeof(colorValueMap));
 	// std::cout << sizeof(route) << std::endl;
 	__gnu_pbds::priority_queue<frontier_node, std::greater<frontier_node>> frontier;
-	double distance_table[LENGTH][LENGTH];
 	memset(distance_table, -1, sizeof(distance_table));
-	bool dont_search[LENGTH][LENGTH];
 	memset(dont_search, 0, sizeof(dont_search));
 
-	frontier.push(frontier_node{0, point});
+	frontier.push(frontier_node{ 0, point });
 	distance_table[point[0]][point[1]] = 0;
 	colorValueMap[point[0]][point[1]] = colorMap[point[0]][point[1]];
 	while (1)
 	{
 		if (frontier.empty())
 		{
-			std::cout << "frontier is empty" << std::endl;
+			// std::cout << "frontier is empty" << std::endl;
 			break;
 		}
 		auto searching_point = frontier.top().position;
@@ -197,9 +298,9 @@ void dijkstra(const std::array<int, 2> &point)
 			}
 			// std::cout << "updating distance : " << distance + neighbor_distance << std::endl;
 			if (iter == frontier.end())
-				frontier.push(frontier_node{distance + neighbor_distance, p});
+				frontier.push(frontier_node{ distance + neighbor_distance, p });
 			else
-				frontier.modify(iter, frontier_node{distance + neighbor_distance, p});
+				frontier.modify(iter, frontier_node{ distance + neighbor_distance, p });
 			distance_table[p[0]][p[1]] = distance + neighbor_distance;
 			colorValueMap[p[0]][p[1]] = color + colorMap[p[0]][p[1]];
 			route[p[0]][p[1]] = i;
@@ -207,6 +308,7 @@ void dijkstra(const std::array<int, 2> &point)
 		}
 	}
 }
+
 std::list<unsigned char> searchWayFromMap(
 	std::array<int, 2> start, std::array<int, 2> end,
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
@@ -223,41 +325,44 @@ std::list<unsigned char> searchWayFromMap(
 	return result;
 }
 
-/* 请于 VS2019 项目属性中开启 C++17 标准：/std:c++17 */
-
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job0; //选手职业，选手 !!必须!! 定义此变量来选择职业
-
-namespace
+void initialization(GameApi& g)
 {
-	[[maybe_unused]] std::uniform_real_distribution<double> direction(0, 2 * 3.1415926);
-	[[maybe_unused]] std::default_random_engine e{std::random_device{}()};
-}
-std::array<int, 2> target = {48, 25};
+    auto self = g.GetSelfInfo();
+    if (playerJob == THUAI4::JobType::Job2) job = LAZY_GOAT;
+    if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
+    if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
 
-void refreshColorMap(const GameApi &g)
+    if (job == PURPLE_FISH)
+    {
+        finalTarget = {50 - CordToGrid(self->x), 50 - CordToGrid(self->y)};
+    }
+    
+    srand(time(NULL));
+}
+
+void refreshColorMap()
 {
 	for (int i = 0; i < LENGTH; i++)
 	{
 		for (int j = 0; j < LENGTH; j++)
 		{
-			if (g.GetCellColor(i, j) == THUAI4::ColorType::Invisible)
+			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 				continue;
-			if (g.GetCellColor(i, j) == THUAI4::ColorType::None)
+			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
 			}
-			else if (g.GetCellColor(i, j) == g.GetSelfTeamColor())
-				colorMap[i][j] = -1;
-			else
+			else if (gameInfo->GetCellColor(i, j) == gameInfo->GetSelfTeamColor())
 				colorMap[i][j] = 1;
+			else
+				colorMap[i][j] = -1;
 		}
 	}
 }
 
-std::unordered_map<int64_t, THUAI4::Character> players;
-void refreshPlayers(GameApi &g)
+void refreshPlayers()
 {
-	auto new_players = g.GetCharacters();
+	auto new_players = gameInfo->GetCharacters();
 	for (auto p : new_players)
 	{
 		if (players.find(p->guid) != players.end())
@@ -266,10 +371,10 @@ void refreshPlayers(GameApi &g)
 	}
 }
 
-std::unordered_map<int64_t, THUAI4::Prop> props;
-void refreshProps(GameApi &g)
+
+void refreshProps()
 {
-	auto new_props = g.GetProps();
+	auto new_props = gameInfo->GetProps();
 	for (auto p : new_props)
 	{
 		if (props.find(p->guid) != props.end())
@@ -278,25 +383,216 @@ void refreshProps(GameApi &g)
 	}
 }
 
-void AI::play(GameApi &g)
+void updateInfo(GameApi& g)
 {
-	auto self = g.GetSelfInfo();
+    if (frame == 0) 
+        initialization(g);
+    frame++;
+    isAct = false;
+    gameInfo = &g;
+    auto self = g.GetSelfInfo();
+    nowPosition = {CordToGrid(self->x), CordToGrid(self->y)};
+    refreshColorMap();
+	refreshPlayers();
+	refreshProps();
+    // std::cout << "Now Position: " << nowPosition[0] << " " << nowPosition[1] << std::endl;
+    dijkstra(nowPosition);
+}
 
-	if (self->bulletNum)
-	{
-		g.Attack(100, 0);
-	}
-	refreshColorMap(g);
-	refreshPlayers(g);
-	refreshProps(g);
+void updateEnd()
+{
+    auto self = gameInfo->GetSelfInfo();
+    lastX = self->x;
+    lastY = self->y;
+    lastPosition = nowPosition;
+}
 
-	dijkstra({(int)self->x / 1000, (int)self->y / 1000});
-	auto l = searchWayFromMap({(int)self->x / 1000, (int)self->y / 1000}, target);
-	double angle = *l.begin() * M_PI / 4;
-	std::cout << "angle : " << angle << "\n";
-	g.MovePlayer(50, angle);
-	// g.MovePlayer(50, 1);
-	std::cout << "I`m at (" << self->x << "," << self->y << ")." << std::endl;
-	// sleep(0.5);
-	usleep(100000);
+int getBestExtendAngle()
+{
+    auto currentX = gameInfo->GetSelfInfo()->x;
+    auto currentY = gameInfo->GetSelfInfo()->y;
+    int bestValue = 0;
+    int bestAngle = 0;
+    for (auto angle = 0; angle < 360; angle++)
+    {
+        int value = 0;
+        for (auto distance = 1000; distance < 500000; distance += 1000)
+        {
+            auto angleR = angleToRadian(angle);
+            auto targetX = currentX + cos(angleR) * distance;
+            auto targetY = currentY + sin(angleR) * distance;
+            int block = defaultMap[CordToGrid(targetX)][CordToGrid(targetY)];
+            if (block == 1) break;
+            int color = colorMap[CordToGrid(targetX)][CordToGrid(targetY)];
+            if (color == -1) value += 2;
+            else if (color == 0) value += 1;
+        }
+        if (value > bestValue)
+        {
+            bestValue = value;
+            bestAngle = angle;
+        }
+    }
+    
+    for (auto distance = 1000; distance < 500000; distance += 1000)
+    {
+        auto angleR = angleToRadian(bestAngle);
+        auto targetX = currentX + cos(angleR) * distance;
+        auto targetY = currentY + sin(angleR) * distance;
+        int block = defaultMap[CordToGrid(targetX)][CordToGrid(targetY)];
+        if (block == 1) break;
+        colorMap[CordToGrid(targetX)][CordToGrid(targetY)] = 1;
+    }
+
+    return bestAngle;
+}
+
+void attackAction()
+{
+    if (isAct) return;
+    auto self = gameInfo->GetSelfInfo();
+    if (self->bulletNum == 0)
+        currentState = WAIT_BULLET;
+    else
+    {
+        if (job == PURPLE_FISH)
+        {
+            auto bestExtendAngle = getBestExtendAngle();
+            gameInfo->Attack(0, angleToRadian(bestExtendAngle));
+            lastAction = ATTACK;
+            isAct = true;
+            currentState = EXPAND_FIELD;
+        }
+        else if (job == MONKEY_DOCTOR)
+        {
+            currentState = SEARCH_ENEMY;
+        }
+    }
+}
+
+void correctPosition()
+{
+    if (isAct) return;
+    auto self = gameInfo->GetSelfInfo();
+    if (!(lastAction == MOVE && lastX == self->x && lastY == self->y)) return;
+    auto centerX = GridToCord(nowPosition[0]); 
+    auto centerY = GridToCord(nowPosition[1]); 
+    auto angle = getPointToPointAngle(self->x, self->y, centerX, centerY);
+    auto distance = getPointToPointDistance(self->x, self->y, centerX, centerY);
+    uint32_t time = uint32_t(distance / double(self->moveSpeed) * 1000);
+    std::cout << "Correct Position Time: " << time << std::endl;
+    gameInfo->MovePlayer(time, angle);
+    lastAction = MOVE;
+    isAct = true;
+}
+
+Position findFarthestTarget()
+{
+    Position bestPosition = nowPosition;
+    double maxDistance = 0;
+    auto self = gameInfo->GetSelfInfo();
+    int bonus = 0;
+    for (auto i = 0; i < 50; ++i)
+        for (auto j = 0; j < 50; ++j)
+        {
+            if (defaultMap[i][j] == 1) continue;
+            if (nowPosition[0] == i && nowPosition[1] == j) continue;
+            Position newPosition = {i, j};
+            bonus = - int(getGridDistance(nowTarget, {i, j}) * 0.5);
+            if (distance_table[i][j] + bonus < maxDistance) continue;
+            auto l = searchWayFromMap(nowPosition, {i, j});
+            int k = 0;
+            auto nextX = self->x;
+            auto nextY = self->y;
+            bool flag = true;
+            for (auto it = l.begin(); it != l.end(); ++it)
+            {
+                if (k == 2) break;
+                nextX += self->moveSpeed / 20. * cos(getMoveAngle(it));
+                nextY += self->moveSpeed / 20. * sin(getMoveAngle(it));
+                if (defaultMap[i][j] == 1 || colorMap[CordToGrid(nextX)][CordToGrid(nextY)] != 1)
+                {
+                    flag = false;
+                    break;
+                }
+                k++;
+            }
+            if (flag)
+            {
+                maxDistance = distance_table[i][j] + bonus;
+                bestPosition = {i, j};
+            }
+        }
+    std::cout << "Bonus: " << bonus << std::endl;
+    return bestPosition;
+}
+
+Position findNearestTeamColor()
+{   
+    double minDistance = 200;
+    Position res;
+    for (auto i = 0; i < 50; ++i)
+        for (auto j = 0; j < 50; ++j)
+        {
+            if (colorMap[i][j] == 1 && distance_table[i][j] < minDistance)
+            {
+                minDistance = distance_table[i][j];
+                res = {i, j};
+            }
+        }
+    return res;
+}
+
+void moveAction()
+{
+    if (isAct) return;
+    if (currentState == WAIT_BULLET)
+    {
+        auto self = gameInfo->GetSelfInfo();
+        if (colorMap[nowPosition[0]][nowPosition[1]] == 0) nowTarget = findNearestTeamColor();
+        else nowTarget = findFarthestTarget();
+        if (nowTarget == nowPosition)
+        {
+            lastAction = WAIT;
+            return;
+        }
+        auto l = searchWayFromMap(nowPosition, nowTarget);
+        double angle = getMoveAngle(l.begin());
+        double nextX = self->x + 1000. * cos(angle);
+        double nextY = self->y + 1000. * sin(angle);
+        nextPosition = {CordToGrid(nextX), CordToGrid(nextY)};
+        // std::cout << "Angle: " << angle << std::endl;
+        // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
+        // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
+        // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
+        gameInfo->MovePlayer(50, angle);
+        lastAction = MOVE;
+        isAct = true;
+    }
+}
+
+void debugInfo()
+{
+	std::cout << "Now Frame " << frame << std::endl;
+	std::cout << "================================" << std::endl;
+	auto self = gameInfo->GetSelfInfo();
+    std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")." << std::endl;
+	std::cout << "NowPosition(Cord): (" << self->x << "," << self->y << ")." << std::endl;
+    std::cout << "NowPosition(Grid): (" << nowPosition[0] << "," << nextPosition[1] << ")" << std::endl;
+    std::cout << "NextPosition(Grid): (" << nextPosition[0] << "," << nextPosition[1] << ")" << std::endl;
+    std::cout << "Now target is: (" << nowTarget[0] << ", " << nowTarget[1] << ")" << std::endl;
+    // std::cout << "Final target is: (" << finalTarget[0] << ", " << finalTarget[1] << ")" << std::endl;
+	std::cout << "================================" << std::endl;
+    std::cout << std::endl;
+}
+
+void AI::play(GameApi& g)
+{
+    updateInfo(g);
+    attackAction();
+    correctPosition();
+    moveAction();
+    updateEnd();
+    debugInfo();
+    usleep(100000);
 }
