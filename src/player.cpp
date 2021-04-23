@@ -2,7 +2,7 @@
 #include "Constants.h"
 
 //为假则play()调用期间游戏状态更新阻塞，为真则只保证当前游戏状态不会被状态更新函数与GameApi的方法同时访问
-extern const bool asynchronous = true;
+extern const bool asynchronous = false;
 
 #include <random>
 #include <iostream>
@@ -49,7 +49,7 @@ struct frontier_node
 };
 
 enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
-enum Action {MOVE, ATTACK, PICK, WAIT};
+enum Action {MOVE, ATTACK, PICK, USE, WAIT};
 enum Job {LAZY_GOAT, MONKEY_DOCTOR, PURPLE_FISH};
 
 /****************************************/
@@ -132,9 +132,13 @@ static double distance_table[LENGTH][LENGTH];
 static bool dont_search[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
+static char propMap[LENGTH][LENGTH];
+static char enemyMap[LENGTH][LENGTH];
+static double areaValue[4];
 static int frame = 0;
 static int lastX, lastY;
 static bool isAct;
+static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
 
@@ -277,8 +281,8 @@ void dijkstra(const std::array<int, 2>& point)
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
-				avaiable[(i + 8 - 1) % 8] = 0;
-				avaiable[(i + 1) % 8] = 0;
+				// avaiable[(i + 8 - 1) % 8] = 0;
+				// avaiable[(i + 1) % 8] = 0;
 			}
 		}
 		for (int i = 0; i < 8; ++i)
@@ -350,6 +354,8 @@ void refreshColorMap()
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 				continue;
+            propMap[i][j] = 0;
+            enemyMap[i][j] = 0;
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
@@ -365,11 +371,14 @@ void refreshColorMap()
 void refreshPlayers()
 {
 	auto new_players = gameInfo->GetCharacters();
-	for (auto p : new_players)
+	auto self = gameInfo->GetSelfInfo();
+    for (auto p : new_players)
 	{
 		if (players.find(p->guid) != players.end())
 			players.erase(p->guid);
 		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
+        // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
+        if (p->teamID != self->teamID) enemyMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -382,6 +391,8 @@ void refreshProps()
 		if (props.find(p->guid) != props.end())
 			props.erase(p->guid);
 		props.insert(std::make_pair(p->guid, THUAI4::Prop(*p)));
+        // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
+        propMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -407,6 +418,31 @@ void updateEnd()
     lastX = self->x;
     lastY = self->y;
     lastPosition = nowPosition;
+}
+
+void pickAction()
+{
+    if (isAct == true) return;
+    auto self = gameInfo->GetSelfInfo();
+    if (self->propType != THUAI4::PropType::Null)
+    {
+        gameInfo->Use();
+        lastAction = USE;
+        isAct = true;
+    }
+    else
+    {
+        auto props = gameInfo->GetProps();
+        for (auto prop: props)
+        {
+            if (CordToGrid(prop->x) == nowPosition[0] && CordToGrid(prop->y) == nowPosition[1])
+            {
+                gameInfo->Pick(prop->propType);
+                lastAction = PICK;
+                isAct = true;
+            }
+        }
+    }
 }
 
 int getBestExtendAngle()
@@ -479,53 +515,80 @@ void correctPosition()
     if (!(lastAction == MOVE && lastX == self->x && lastY == self->y)) return;
     auto centerX = GridToCord(nowPosition[0]); 
     auto centerY = GridToCord(nowPosition[1]); 
-    auto angle = getPointToPointAngle(self->x, self->y, centerX, centerY);
+    auto angleR = getPointToPointAngle(self->x, self->y, centerX, centerY);
     auto distance = getPointToPointDistance(self->x, self->y, centerX, centerY);
     uint32_t time = uint32_t(distance / double(self->moveSpeed) * 1000);
+    std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
+    std::cout << "Correct Position Distance: " << distance << std::endl;
     std::cout << "Correct Position Time: " << time << std::endl;
-    gameInfo->MovePlayer(time, angle);
+    gameInfo->MovePlayer(time, angleR);
     lastAction = MOVE;
     isAct = true;
 }
 
-Position findFarthestTarget()
+void calcAreaValue()
+{
+    for (auto k = 0; k < 4; ++k)
+    {
+        areaValue[k] = 1;
+        int beginX = (k / 2) * 25;
+        int beginY = (k % 2) * 25;
+        for (auto i = beginX; i < beginX + 25; ++i)
+            for (auto j = beginY; j < beginY + 25; ++j)
+            {
+                if (defaultMap[i][j] == 1) continue;
+                if (colorMap[i][j] == 0) areaValue[k] += 50;
+                if (colorMap[i][j] == -1) areaValue[k] += 100;
+                if (enemyMap[i][j] == 1) areaValue[k] -= 10000;
+            }
+    }
+}
+
+Position findBestTarget()
 {
     Position bestPosition = nowPosition;
-    double maxDistance = 0;
+    double maxValue = 0;
+    double maxValueBase = 0;
     auto self = gameInfo->GetSelfInfo();
-    int bonus = 0;
+    calcAreaValue();
+    
     for (auto i = 0; i < 50; ++i)
         for (auto j = 0; j < 50; ++j)
         {
             if (defaultMap[i][j] == 1) continue;
             if (nowPosition[0] == i && nowPosition[1] == j) continue;
-            Position newPosition = {i, j};
-            bonus = - int(getGridDistance(nowTarget, {i, j}) * 0.5);
-            if (distance_table[i][j] + bonus < maxDistance) continue;
+            int areaIndex = (i / 25) * 2 + j / 25;
+            if (areaValue[areaIndex] < 0) continue;
+            double value = 0;
             auto l = searchWayFromMap(nowPosition, {i, j});
-            int k = 0;
             auto nextX = self->x;
             auto nextY = self->y;
-            bool flag = true;
+            int baseValue = 0;
             for (auto it = l.begin(); it != l.end(); ++it)
             {
-                if (k == 2) break;
-                nextX += self->moveSpeed / 20. * cos(getMoveAngle(it));
-                nextY += self->moveSpeed / 20. * sin(getMoveAngle(it));
-                if (defaultMap[i][j] == 1 || colorMap[CordToGrid(nextX)][CordToGrid(nextY)] != 1)
-                {
-                    flag = false;
-                    break;
-                }
-                k++;
+                nextX += 1000. * cos(getMoveAngle(it));
+                nextY += 1000. * sin(getMoveAngle(it));
+                // std::cout << nextX << " " << nextY << std::endl;
+                auto gridX = CordToGrid(nextX);
+                auto gridY = CordToGrid(nextY);
+                if (gridX < 0 || gridY < 0 || gridX >= 50 || gridY >= 50) break;
+                if (defaultMap[gridX][gridY] == 1) break;
+                if (colorMap[gridX][gridY] != 1) break; 
+                baseValue++;
+                if (propMap[gridX][gridY] == 1)
+                    baseValue += 100000;
             }
-            if (flag)
+            value = baseValue + areaValue[areaIndex];
+            if (value >= maxValue)
             {
-                maxDistance = distance_table[i][j] + bonus;
+                maxValue = value;
+                maxValueBase = baseValue;
                 bestPosition = {i, j};
             }
         }
-    std::cout << "Bonus: " << bonus << std::endl;
+    std::cout << "BaseValue: " << maxValueBase << std::endl;
+    std::cout << "areaValue: " << maxValue - maxValueBase << std::endl;
+    std::cout << "TotalValue: " << maxValue << std::endl;
     return bestPosition;
 }
 
@@ -552,7 +615,7 @@ void moveAction()
     {
         auto self = gameInfo->GetSelfInfo();
         if (colorMap[nowPosition[0]][nowPosition[1]] == 0) nowTarget = findNearestTeamColor();
-        else nowTarget = findFarthestTarget();
+        else nowTarget = findBestTarget();
         if (nowTarget == nowPosition)
         {
             lastAction = WAIT;
@@ -563,6 +626,11 @@ void moveAction()
         double nextX = self->x + 1000. * cos(angle);
         double nextY = self->y + 1000. * sin(angle);
         nextPosition = {CordToGrid(nextX), CordToGrid(nextY)};
+        if (colorMap[nextPosition[0]][nextPosition[1]] != 1)
+        {
+            lastAction = WAIT;
+            return;
+        }
         // std::cout << "Angle: " << angle << std::endl;
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
@@ -575,7 +643,7 @@ void moveAction()
 
 void debugInfo()
 {
-	std::cout << "Now Frame " << frame << std::endl;
+	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
     std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")." << std::endl;
@@ -590,11 +658,14 @@ void debugInfo()
 
 void AI::play(GameApi& g)
 {
+    processBegin = clock();
     updateInfo(g);
+    pickAction();
     attackAction();
     correctPosition();
     moveAction();
     updateEnd();
+    processEnd = clock();
     debugInfo();
-    usleep(100000);
+    usleep(55000);
 }
