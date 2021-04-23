@@ -137,6 +137,7 @@ static char enemyMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int frame = 0;
 static int lastX, lastY;
+static int moveValue;
 static bool isAct;
 static clock_t processBegin, processEnd;
 
@@ -482,7 +483,25 @@ int getBestExtendAngle()
         colorMap[CordToGrid(targetX)][CordToGrid(targetY)] = 1;
     }
 
-    return bestAngle;
+    return angleToRadian(bestAngle);
+}
+
+double attackEnemyAngle()
+{
+    double res = -1, minDistance = 2000;
+    auto targetPlayers = gameInfo->GetCharacters();
+	auto self = gameInfo->GetSelfInfo();
+    for (auto player: targetPlayers)
+    {
+        if (self->teamID == player->teamID) continue;
+        double distance = getPointToPointDistance(self->x, self->y, player->x, player->y);
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            res = getPointToPointAngle(self->x, self->y, player->x, player->y);
+        }
+	}
+    return res;
 }
 
 void attackAction()
@@ -493,18 +512,12 @@ void attackAction()
         currentState = WAIT_BULLET;
     else
     {
-        if (job == PURPLE_FISH)
-        {
-            auto bestExtendAngle = getBestExtendAngle();
-            gameInfo->Attack(0, angleToRadian(bestExtendAngle));
-            lastAction = ATTACK;
-            isAct = true;
-            currentState = EXPAND_FIELD;
-        }
-        else if (job == MONKEY_DOCTOR)
-        {
-            currentState = SEARCH_ENEMY;
-        }
+        int angle = attackEnemyAngle();
+        if (angle < 0) angle = getBestExtendAngle();
+        gameInfo->Attack(0, angle);
+        lastAction = ATTACK;
+        isAct = true;
+        currentState = EXPAND_FIELD;
     }
 }
 
@@ -574,9 +587,23 @@ Position findBestTarget()
                 if (gridX < 0 || gridY < 0 || gridX >= 50 || gridY >= 50) break;
                 if (defaultMap[gridX][gridY] == 1) break;
                 if (colorMap[gridX][gridY] != 1) break; 
-                baseValue++;
                 if (propMap[gridX][gridY] == 1)
                     baseValue += 100000;
+                baseValue++;
+            }
+            int k = 0;
+            nextX = self->x;
+            nextY = self->y;
+            for (auto it = l.begin(); it != l.end(); ++it)
+            {
+                if (k > 5) break;
+                nextX += 1000. * cos(getMoveAngle(it));
+                nextY += 1000. * sin(getMoveAngle(it));
+                auto gridX = CordToGrid(nextX);
+                auto gridY = CordToGrid(nextY);
+                if (propMap[gridX][gridY] == 1)
+                    baseValue += 100000;
+                k++;
             }
             value = baseValue + areaValue[areaIndex];
             if (value >= maxValue)
@@ -589,6 +616,7 @@ Position findBestTarget()
     std::cout << "BaseValue: " << maxValueBase << std::endl;
     std::cout << "areaValue: " << maxValue - maxValueBase << std::endl;
     std::cout << "TotalValue: " << maxValue << std::endl;
+    moveValue = maxValue;
     return bestPosition;
 }
 
@@ -614,8 +642,9 @@ void moveAction()
     if (currentState == WAIT_BULLET)
     {
         auto self = gameInfo->GetSelfInfo();
-        if (colorMap[nowPosition[0]][nowPosition[1]] == 0) nowTarget = findNearestTeamColor();
-        else nowTarget = findBestTarget();
+        nowTarget = findBestTarget();
+        if (moveValue < 100000 && colorMap[nowPosition[0]][nowPosition[1]] == 0) 
+            nowTarget = findNearestTeamColor();
         if (nowTarget == nowPosition)
         {
             lastAction = WAIT;
@@ -626,7 +655,7 @@ void moveAction()
         double nextX = self->x + 1000. * cos(angle);
         double nextY = self->y + 1000. * sin(angle);
         nextPosition = {CordToGrid(nextX), CordToGrid(nextY)};
-        if (colorMap[nextPosition[0]][nextPosition[1]] != 1)
+        if (moveValue < 100000 && colorMap[nextPosition[0]][nextPosition[1]] != 1)
         {
             lastAction = WAIT;
             return;
@@ -667,5 +696,5 @@ void AI::play(GameApi& g)
     updateEnd();
     processEnd = clock();
     debugInfo();
-    usleep(55000);
+    usleep(50000);
 }
