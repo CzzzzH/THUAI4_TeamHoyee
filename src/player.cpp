@@ -356,6 +356,8 @@ void dijkstra(const std::array<int, 2> &point)
 			auto p = searching_point + operate[i];
 			// std::cout << "updating children :  (" << p[0] << "," << p[1] << ")" << std::endl;
 			double neighbor_distance = i % 2 ? sqrt(2) : 1;
+			if (colorMap[p[0]][p[1]] != 1)
+				neighbor_distance *= 10;
 			if (dont_search[p[0]][p[1]])
 				continue;
 			if (distance_table[p[0]][p[1]] >= 0 && distance + neighbor_distance > distance_table[p[0]][p[1]])
