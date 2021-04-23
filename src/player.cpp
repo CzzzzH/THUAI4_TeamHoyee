@@ -277,6 +277,8 @@ void dijkstra(const std::array<int, 2>& point)
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
+				avaiable[(i + 8 - 1) % 8] = 0;
+				avaiable[(i + 1) % 8] = 0;
 			}
 		}
 		for (int i = 0; i < 8; ++i)
