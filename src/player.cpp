@@ -696,19 +696,37 @@ double attackEnemyAngle()
 
 void avoidBullet()
 {
+    if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
     double unitMove = self->moveSpeed / 50.0;
     double rad = self->facingDirection;
+    // std::cout << "Bullet Size: " << gameInfo->GetBullets().size() << std::endl;
     for (auto bullet : gameInfo->GetBullets())
     {
-        if (bullet->teamID != self->teamID) continue;
+        if (bullet->teamID == self->teamID) continue;
         double bulletUnitMove = bullet->moveSpeed / 50.0;
-        double bulletRad = self->facingDirection;
+        double bulletRad = bullet->facingDirection;
         double dx = self->x + unitMove * cos(rad) - bullet->x - bulletUnitMove * cos(bulletRad);
         double dy = self->y + unitMove * sin(rad) - bullet->y - bulletUnitMove * sin(bulletRad);
-        if(dx * dx + dy * dy < self->radius)
+        if((dx * dx + dy * dy) < ((bullet->radius + self-> radius) * (bullet->radius + self-> radius) * 20))
         {
-            gameInfo->MovePlayer(50, M_PI/2 + bulletRad);
+            if((std::abs(dx * cos(bulletRad) + dy * sin(bulletRad)) / sqrt(dx *dx + dy * dy)) > 0.7)
+            {
+                if((dx * cos(M_PI / 2 + bulletRad) + dy * sin(M_PI / 2 + bulletRad)) < 0)
+                {
+                    gameInfo->MovePlayer(50, - M_PI / 2 + bulletRad);
+                }
+                else
+                {
+                    gameInfo->MovePlayer(50, M_PI / 2 + bulletRad);
+                }
+            }
+
+            // if(atan(std::abs(dx)/std::abs(dy)) + bulletRad < M_PI)
+            // {
+            //     unsigned char block1 = defaultMap[int((dx + cos(M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(M_PI/2 + bulletRad) * 1000)/1000)];
+            //     unsigned char block2 = defaultMap[int((dx + cos(- M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(- M_PI/2 + bulletRad) * 1000)/1000)];
+            // }
             lastAction = MOVE;
             isAct = true;
             break;
@@ -887,7 +905,7 @@ void AI::play(GameApi& g)
     pickAction();
     avoidBullet();
     attackAction();
-    // correctPosition();
+    correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
