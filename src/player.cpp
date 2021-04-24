@@ -4,25 +4,20 @@
 //为假则play()调用期间游戏状态更新阻塞，为真则只保证当前游戏状态不会被状态更新函数与GameApi的方法同时访问
 extern const bool asynchronous = false;
 
+#include <ext/pb_ds/priority_queue.hpp>
 #include <random>
 #include <iostream>
 #include <unordered_map>
-// #include "polypartition.h"
-// #include "PolygonConvexPartition.h"
-// #include "map_poly.h"
-#include "math.h"
-#include <iostream>
 #include <unistd.h>
-#include <ext/pb_ds/priority_queue.hpp>
 #include <unordered_set>
-// #include "MainWindow.h"
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include <ctime>
+#include <cstring>
 #include <memory>
 #include <list>
-#include <string.h>
-#include <random>
+// #include "MainWindow.h"
+
 
 /****************************************/
 /*                                      */
@@ -133,7 +128,6 @@ static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
 static bool dont_search[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
-static char hasExtend[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static char propMap[LENGTH][LENGTH];
 static char enemyMap[LENGTH][LENGTH];
@@ -430,7 +424,7 @@ std::list<unsigned char> searchWayFromMap(
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
 {
 	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
-	std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
+	// std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
 	auto new_end = end;
 	if (route[end[0]][end[1]] > 7 || route[end[0]][end[1]] < 0)
 	{
@@ -473,7 +467,7 @@ std::list<unsigned char> searchWayFromMap(
 				break;
 		}
 	}
-	std::cout << "new end : " << new_end[0] << "," << new_end[1] <<std::endl;
+	// std::cout << "new end : " << new_end[0] << "," << new_end[1] <<std::endl;
 	std::list<unsigned char> result;
 	while (1)
 	{
@@ -572,12 +566,6 @@ void updateInfo(GameApi& g)
     refreshColorMap();
 	refreshPlayers();
 	refreshProps();
-    int extendCount = 0;
-    for (int i = 0; i < 50; ++i)
-        for (int j = 0; j < 50; ++j)
-            extendCount += hasExtend[i][j];
-    if (extendCount > 1800)
-        memset(hasExtend, 0, sizeof(hasExtend));
 	memcpy(dynamicMap, defaultMap, sizeof(defaultMap));
 	for (auto p : players){
 		if (p.second.guid == g.GetSelfInfo()->guid)
@@ -624,7 +612,7 @@ void pickAction()
     }
 }
 
-int getBestExtendAngle()
+double getBestExtendAngle()
 {
     auto self = gameInfo->GetSelfInfo();
     int bestValue = 0;
@@ -658,13 +646,8 @@ int getBestExtendAngle()
             //     for (int j = std::max(0, targetY - 1); j <= std::min(49, targetY + 1); ++j)
             //         block += defaultMap[i][j];
             if (block > 0) break;
-            if (hasExtend[targetX][targetY] == 0)
-            {
-                int bonus = 0;
-                if (distance < 5000) bonus = 2;
-                if (colorMap[targetX][targetY] == -1) value += 4 * (1 + bonus) ;
-                else if (colorMap[targetX][targetY] == 0) value += 2 * (1 + bonus);
-            }
+            if (colorMap[targetX][targetY] == -1) value += 2;
+            else if (colorMap[targetX][targetY] == 0) value += 1;
         }
         if (value >= bestValue)
         {
@@ -675,7 +658,7 @@ int getBestExtendAngle()
     
     auto lastX = nowPosition[0];
     auto lastY = nowPosition[1];
-    // std::cout << "Updated colorMap origin value: " << std::endl;
+    // std::cout << "Updated extend value: " << std::endl;
     for (auto distance = 1000; distance < 100000; distance ++)
     {
         auto angleR = angleToRadian(bestAngle);
@@ -690,12 +673,9 @@ int getBestExtendAngle()
         //     for (int j = std::max(0, targetY - 1); j <= std::min(49, targetY + 1); ++j)
         //         block += defaultMap[i][j];
         if (block > 0) break;
-        // std::cout << targetX << " " << targetY << " " << int(colorMap[targetX][targetY]) << " | ";
         colorMap[targetX][targetY] = 1;
-        hasExtend[targetX][targetY] = 1;
     }
     // std::cout << std::endl;
-
     // std::cout << "Best Value: " << bestValue << " Best Angle: " << bestAngle << std::endl; 
     lastAttackAngle = bestAngle;
     return angleToRadian(bestAngle);
@@ -716,7 +696,7 @@ double attackEnemyAngle()
             res = getPointToPointAngle(self->x, self->y, player->x, player->y);
         }
 	}
-    std::cout << "Attack Angle: " << res << std::endl;
+    // std::cout << "Attack Angle: " << res << std::endl;
     return res;
 }
 
@@ -750,8 +730,9 @@ void attackAction()
         currentState = WAIT_BULLET;
     else
     {
-        int angle = attackEnemyAngle();
+        double angle = attackEnemyAngle();
         if (angle < 0) angle = getBestExtendAngle();
+        // std::cout << "Attack Angle(Radius): " << angle << std::endl;
         gameInfo->Attack(0, angle);
         lastAction = ATTACK;
         isAct = true;
@@ -840,28 +821,29 @@ void moveAction()
         auto self = gameInfo->GetSelfInfo();
         nowTarget = findBestTarget();
 		// std::cout << "now target " << nowTarget[0] << " , " << nowTarget[1] << std::endl;
-        std::cout << "Get item: " << getItem << std::endl;
+        // std::cout << "Get item: " << getItem << std::endl;
         if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
             nowTarget = findNearestTeamColor();
         if (nowTarget == nowPosition)
         {
-            std::cout << "WAIT(1)!: " << std::endl;
+            // std::cout << "WAIT(1)!: " << std::endl;
             lastAction = WAIT;
             return;
         }
         auto l = searchWayFromMap(nowPosition, nowTarget);
         double angle = getMoveAngle(l.begin());
-        std::cout << "MoveAngle: " << angle << std::endl;
+        // std::cout << "MoveAngle: " << angle << std::endl;
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
         if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
         {
-            std::cout << "WAIT(2)!: " << std::endl;
+            // std::cout << "WAIT(2)!: " << std::endl;
             lastAction = WAIT;
             return;
         }
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
+        std::cout << "MoveAngle: " << angle << std::endl;
         gameInfo->MovePlayer(50, angle);
         lastAction = MOVE;
         isAct = true;
