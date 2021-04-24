@@ -87,15 +87,15 @@ static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, //20
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, //30
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -562,7 +562,7 @@ int getBestExtendAngle()
     auto self = gameInfo->GetSelfInfo();
     int bestValue = 0;
     int bestAngle = 0;
-    for (auto angle = 0; angle < 360; angle ++)
+    for (auto angle = rand() % 10; angle < 360; angle += 10)
     {
         if (std::abs(lastAttackAngle - angle) < 30) continue;
         bool flag = false;
@@ -576,7 +576,7 @@ int getBestExtendAngle()
         int value = 0;
         auto lastX = nowPosition[0];
         auto lastY = nowPosition[1];
-        for (auto distance = 0; distance < 100000; distance += 100)
+        for (auto distance = 1000; distance < 100000; distance += 100)
         {
             auto angleR = angleToRadian(angle);
             auto targetX = CordToGrid(self->x + cos(angleR) * distance);
@@ -593,10 +593,11 @@ int getBestExtendAngle()
             if (block > 0) break;
             if (hasExtend[targetX][targetY] == 0)
             {
-                if (colorMap[targetX][targetY] == -1) value += 2;
-                else if (colorMap[targetX][targetY] == 0) value += 1;
+                int bonus = 0;
+                if (distance < 5000) bonus = 2;
+                if (colorMap[targetX][targetY] == -1) value += 4 * (1 + bonus) ;
+                else if (colorMap[targetX][targetY] == 0) value += 2 * (1 + bonus);
             }
-            else value -= 1;
         }
         if (value >= bestValue)
         {
@@ -608,7 +609,7 @@ int getBestExtendAngle()
     auto lastX = nowPosition[0];
     auto lastY = nowPosition[1];
     // std::cout << "Updated colorMap origin value: " << std::endl;
-    for (auto distance = 0; distance < 100000; distance += 100)
+    for (auto distance = 1000; distance < 100000; distance ++)
     {
         auto angleR = angleToRadian(bestAngle);
         auto targetX = CordToGrid(self->x + cos(angleR) * distance);
@@ -680,9 +681,9 @@ void correctPosition()
     auto angleR = getPointToPointAngle(self->x, self->y, centerX, centerY);
     auto distance = getPointToPointDistance(self->x, self->y, centerX, centerY);
     uint32_t time = uint32_t(distance / double(self->moveSpeed) * 1000);
-    // std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
-    // std::cout << "Correct Position Distance: " << distance << std::endl;
-    // std::cout << "Correct Position Time: " << time << std::endl;
+    std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
+    std::cout << "Correct Position Distance: " << distance << std::endl;
+    std::cout << "Correct Position Time: " << time << std::endl;
     if (frame % 2 == 0) gameInfo->MovePlayer(50, angleR + 0.1);
     else gameInfo->MovePlayer(50, angleR + 0.1);
     lastAction = MOVE;
@@ -731,7 +732,7 @@ Position findBestTarget()
         }
     // std::cout << "Min Distance: " << minDistance << std::endl;
     // std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
-    if (minDistance < 500 && minDistance > 0)
+    if (minDistance < 50000)
     {
         getItem = true;
         return bestTarget;
@@ -770,7 +771,7 @@ void moveAction()
         auto self = gameInfo->GetSelfInfo();
         nowTarget = findBestTarget();
         // std::cout << "Get item: " << getItem << std::endl;
-        if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] == 0) 
+        if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
             nowTarget = findNearestTeamColor();
         if (nowTarget == nowPosition)
         {
@@ -780,12 +781,12 @@ void moveAction()
         auto l = searchWayFromMap(nowPosition, nowTarget);
         double angle = getMoveAngle(l.begin());
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
-        if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] != 0)
+        if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
         {
             lastAction = WAIT;
             return;
         }
-        std::cout << "Angle: " << angle << std::endl;
+        std::cout << "MoveAngle: " << angle << std::endl;
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
@@ -800,6 +801,7 @@ void debugInfo()
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
+    std::cout << "Last Attack Angle: " << lastAttackAngle << std::endl;
     std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")" << std::endl;
 	std::cout << "NowPosition(Cord): (" << self->x << "," << self->y << ")" << std::endl;
     std::cout << "NowPosition(Grid): (" << nowPosition[0] << "," << nowPosition[1] << ")" << std::endl;
@@ -836,7 +838,7 @@ void AI::play(GameApi& g)
     updateInfo(g);
     pickAction();
     attackAction();
-    // correctPosition();
+    correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
