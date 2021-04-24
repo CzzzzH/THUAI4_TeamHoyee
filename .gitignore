@@ -1,11 +1,5 @@
-/include/
-/lib/
-/x64
-.vscode/
-.idea/
-so
-a
-library
-*.o
-PLAYER
-*.d
+/linux/
+/win/
+/a/
+/so/
+/.vscode

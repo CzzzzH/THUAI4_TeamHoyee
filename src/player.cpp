@@ -470,8 +470,10 @@ std::list<unsigned char> searchWayFromMap(
 		func(new_end);
 		if (new_end == start)
 			break;
+        if (route[new_end[0]][new_end[1]] < 0 || route[new_end[0]][new_end[1]] >= 8)
+            break;
 		result.push_front(route[new_end[0]][new_end[1]]);
-		// std::cout<<"ddd"<<std::endl;
+		// std::cout << new_end[0] << "  " << new_end[1] << "  " << (int)route[new_end[0]][new_end[1]] << std::endl;
 		new_end = new_end - operate[route[new_end[0]][new_end[1]]];
 		// std::cout<<"eee"<<std::endl;
 	}
@@ -562,8 +564,8 @@ void updateInfo(GameApi& g)
 	for (auto p : players){
 		if (p.second.guid == g.GetSelfInfo()->guid)
 			continue;
-		auto tmp_x = (int)round(p.second.x / 1000);
-		auto tmp_y = (int)round(p.second.y / 1000);
+		auto tmp_x = (int)round((double)p.second.x / 1000.0);
+		auto tmp_y = (int)round((double)p.second.y / 1000.0);
 		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
 	}
     dijkstra({int(self->x), int(self->y)});
@@ -742,9 +744,9 @@ void correctPosition()
     auto angleR = getPointToPointAngle(self->x, self->y, centerX, centerY);
     auto distance = getPointToPointDistance(self->x, self->y, centerX, centerY);
     uint32_t time = uint32_t(distance / double(self->moveSpeed) * 1000);
-    std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
-    std::cout << "Correct Position Distance: " << distance << std::endl;
-    std::cout << "Correct Position Time: " << time << std::endl;
+    // std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
+    // std::cout << "Correct Position Distance: " << distance << std::endl;
+    // std::cout << "Correct Position Time: " << time << std::endl;
     if (frame % 2 == 0) gameInfo->MovePlayer(50, angleR + 0.1);
     else gameInfo->MovePlayer(50, angleR + 0.1);
     lastAction = MOVE;
@@ -835,7 +837,7 @@ void moveAction()
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
-        std::cout << "MoveAngle: " << angle << std::endl;
+        // std::cout << "MoveAngle: " << angle << std::endl;
         gameInfo->MovePlayer(50, angle);
         lastAction = MOVE;
         isAct = true;
@@ -889,6 +891,6 @@ void AI::play(GameApi& g)
     moveAction();
     updateEnd();
     processEnd = clock();
-    debugInfo();
+    // debugInfo();
     usleep(50000);
 }
