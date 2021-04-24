@@ -142,6 +142,7 @@ static bool isAct, getItem;
 static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
+std::vector<Position> final_target_list;
 
 const std::array<int, 2> operate[] = {
 	{1, 0},
@@ -446,7 +447,15 @@ void initialization(GameApi& g)
         if (CordToGrid(self->x) < 5) finalTarget[0] = 45;
         if (CordToGrid(self->y) < 5) finalTarget[1] = 45;
     }
-    
+    nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
+    if (nowPosition[0] == 2 && nowPosition[1] == 3) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 3 && nowPosition[1] == 2) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 46 && nowPosition[1] == 2) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 47 && nowPosition[1] == 3) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 2 && nowPosition[1] == 46) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 3 && nowPosition[1] == 47) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 46 && nowPosition[1] == 47) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    else if (nowPosition[0] == 47 && nowPosition[1] == 46) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
     srand(time(NULL));
 }
 
@@ -636,22 +645,21 @@ int getBestExtendAngle()
 
 double attackEnemyAngle()
 {
-    // double res = -1, minDistance = 3000;
-    // auto targetPlayers = gameInfo->GetCharacters();
-	// auto self = gameInfo->GetSelfInfo();
-    // for (auto player: targetPlayers)
-    // {
-    //     if (self->teamID == player->teamID) continue;
-    //     double distance = getPointToPointDistance(self->x, self->y, player->x, player->y);
-    //     if (distance < minDistance)
-    //     {
-    //         minDistance = distance;
-    //         res = getPointToPointAngle(self->x, self->y, player->x, player->y);
-    //     }
-	// }
-    // std::cout << "Attack Angle: " << res << std::endl;
-    // return res;
-    return -1;
+    double res = -1, minDistance = 3000;
+    auto targetPlayers = gameInfo->GetCharacters();
+	auto self = gameInfo->GetSelfInfo();
+    for (auto player: targetPlayers)
+    {
+        if (self->teamID == player->teamID) continue;
+        double distance = getPointToPointDistance(self->x, self->y, player->x, player->y);
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            res = getPointToPointAngle(self->x, self->y, player->x, player->y);
+        }
+	}
+    std::cout << "Attack Angle: " << res << std::endl;
+    return res;
 }
 
 void avoidBullet()
@@ -736,7 +744,6 @@ Position findBestTarget()
     Position bestTarget;
     auto self = gameInfo->GetSelfInfo();
     getItem = false;
-	std::vector<std::array<int, 2>> final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
 	static int count = 0;
 
     for (auto i = 0; i < 50; ++i)
@@ -792,23 +799,25 @@ void moveAction()
     {
         auto self = gameInfo->GetSelfInfo();
         nowTarget = findBestTarget();
-        // std::cout << "Get item: " << getItem << std::endl;
+        std::cout << "Get item: " << getItem << std::endl;
         if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
             nowTarget = findNearestTeamColor();
         if (nowTarget == nowPosition)
         {
+            std::cout << "WAIT(1)!: " << std::endl;
             lastAction = WAIT;
             return;
         }
         auto l = searchWayFromMap(nowPosition, nowTarget);
         double angle = getMoveAngle(l.begin());
+        std::cout << "MoveAngle: " << angle << std::endl;
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
         if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
         {
+            std::cout << "WAIT(2)!: " << std::endl;
             lastAction = WAIT;
             return;
         }
-        std::cout << "MoveAngle: " << angle << std::endl;
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
