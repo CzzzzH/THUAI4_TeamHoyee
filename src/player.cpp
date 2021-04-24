@@ -120,6 +120,8 @@ const static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //49
 };
 
+unsigned char dynamicMap[LENGTH][LENGTH];
+
 std::unordered_map<int64_t, THUAI4::Character> players;
 std::unordered_map<int64_t, THUAI4::Prop> props;
 
@@ -296,7 +298,7 @@ void dijkstra(const std::array<int, 2> &point)
 		memset(avaiable, 1, sizeof(avaiable));
 		for (int i = 0; i < 8; i++)
 		{
-			if (defaultMap[p[i][0]][p[i][1]])
+			if (dynamicMap[p[i][0]][p[i][1]])
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
@@ -309,39 +311,39 @@ void dijkstra(const std::array<int, 2> &point)
 		}
 		if (decimal_part[1] < 500)
 		{
-			if (defaultMap[p[5][0]][p[5][1]])
+			if (dynamicMap[p[5][0]][p[5][1]])
 				avaiable[4] = 0;
-			if (defaultMap[p[7][0]][p[7][1]])
+			if (dynamicMap[p[7][0]][p[7][1]])
 				avaiable[0] = 0;
 		}
 		else if (decimal_part[1] > 500)
 		{
-			if (defaultMap[p[3][0]][p[3][1]])
+			if (dynamicMap[p[3][0]][p[3][1]])
 				avaiable[4] = 0;
-			if (defaultMap[p[1][0]][p[1][1]])
+			if (dynamicMap[p[1][0]][p[1][1]])
 				avaiable[0] = 0;
 		}
 		if (decimal_part[0] < 500)
 		{
-			if (defaultMap[p[3][0]][p[3][1]])
+			if (dynamicMap[p[3][0]][p[3][1]])
 				avaiable[2] = 0;
-			if (defaultMap[p[5][0]][p[5][1]])
+			if (dynamicMap[p[5][0]][p[5][1]])
 				avaiable[6] = 0;
 		}
 		else if (decimal_part[0] > 500)
 		{
-			if (defaultMap[p[1][0]][p[1][1]])
+			if (dynamicMap[p[1][0]][p[1][1]])
 				avaiable[2] = 0;
-			if (defaultMap[p[7][0]][p[7][1]])
+			if (dynamicMap[p[7][0]][p[7][1]])
 				avaiable[6] = 0;
 		}
 		if (
-			(defaultMap[p[1][0]][p[1][1]] && pointToLineDistance(operate[1] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600) ||
-			(defaultMap[p[5][0]][p[5][1]] && pointToLineDistance(operate[5] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600))
+			(dynamicMap[p[1][0]][p[1][1]] && pointToLineDistance(operate[1] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600) ||
+			(dynamicMap[p[5][0]][p[5][1]] && pointToLineDistance(operate[5] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600))
 			avaiable[3] = avaiable[7] = 0;
 		if (
-			(defaultMap[p[3][0]][p[3][1]] && pointToLineDistance(operate[3] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600) ||
-			(defaultMap[p[7][0]][p[7][1]] && pointToLineDistance(operate[7] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600))
+			(dynamicMap[p[3][0]][p[3][1]] && pointToLineDistance(operate[3] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600) ||
+			(dynamicMap[p[7][0]][p[7][1]] && pointToLineDistance(operate[7] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600))
 			avaiable[1] = avaiable[5] = 0;
 		for (int i = 0; i < 8; ++i)
 		{
@@ -350,7 +352,7 @@ void dijkstra(const std::array<int, 2> &point)
 			auto p = int_part + operate[i];
 			double distance = i % 2 ? sqrt(2) : 1;
 			frontier.push(frontier_node{distance, p});
-            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * 2;
+            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * 6;
 			else distance_table[p[0]][p[1]] = distance;
 			colorValueMap[p[0]][p[1]] = colorMap[p[0]][p[1]];
 			route[p[0]][p[1]] = i;
@@ -374,7 +376,7 @@ void dijkstra(const std::array<int, 2> &point)
 		for (int i = 0; i < 8; i += 2)
 		{
 			auto p = searching_point + operate[i];
-			if (defaultMap[p[0]][p[1]])
+			if (dynamicMap[p[0]][p[1]])
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
@@ -385,7 +387,7 @@ void dijkstra(const std::array<int, 2> &point)
 		for (int i = 1; i < 8; i += 2)
 		{
 			auto p = searching_point + operate[i];
-			if (defaultMap[p[0]][p[1]])
+			if (dynamicMap[p[0]][p[1]])
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
@@ -399,7 +401,7 @@ void dijkstra(const std::array<int, 2> &point)
 			// std::cout << "updating children :  (" << p[0] << "," << p[1] << ")" << std::endl;
 			double neighbor_distance = i % 2 ? sqrt(2) : 1;
 			if (colorMap[p[0]][p[1]] != 1)
-				neighbor_distance *= 2;
+				neighbor_distance *= 6;
 			if (dont_search[p[0]][p[1]])
 				continue;
 			if (distance_table[p[0]][p[1]] >= 0 && distance + neighbor_distance > distance_table[p[0]][p[1]])
@@ -427,17 +429,60 @@ std::list<unsigned char> searchWayFromMap(
 	std::array<int, 2> start, std::array<int, 2> end,
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
 {
-	std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
+	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
 	std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
+	auto new_end = end;
+	if (route[end[0]][end[1]] > 7 || route[end[0]][end[1]] < 0)
+	{
+		for (int i = 1 ; i < 10 ; ++i)
+		{
+			bool is_break = false;
+			for (int x = std::max(end[0] - i, 0) ; x <= std::min(end[0] + i, 49) ; ++x)
+			{
+				if(!dynamicMap[x][end[1] - i])
+				{
+					new_end = {x, end[1] - i};
+					is_break = true;
+					break;
+				}
+				if(!dynamicMap[x][end[1] + i])
+				{
+					new_end = {x, end[1] + i};
+					is_break = true;
+					break;
+				}
+			}
+			if (is_break)
+				break;
+			for (int y = std::max(end[0] - i + 1, 0) ; y <= std::min(end[0] + i - 1, 49) ; ++y)
+			{
+				if(!dynamicMap[end[0] - i][y])
+				{
+					new_end = {end[0] - i, y};
+					is_break = true;
+					break;
+				}
+				if(!dynamicMap[end[0] + i][y])
+				{
+					new_end = {end[0] + i, y};
+					is_break = true;
+					break;
+				}
+			}
+			if (is_break)
+				break;
+		}
+	}
+	std::cout << "new end : " << new_end[0] << "," << new_end[1] <<std::endl;
 	std::list<unsigned char> result;
 	while (1)
 	{
-		func(end);
-		if (end == start)
+		func(new_end);
+		if (new_end == start)
 			break;
-		result.push_front(route[end[0]][end[1]]);
+		result.push_front(route[new_end[0]][new_end[1]]);
 		// std::cout<<"ddd"<<std::endl;
-		end = end - operate[route[end[0]][end[1]]];
+		new_end = new_end - operate[route[new_end[0]][new_end[1]]];
 		// std::cout<<"eee"<<std::endl;
 	}
 	return result;
@@ -533,6 +578,14 @@ void updateInfo(GameApi& g)
             extendCount += hasExtend[i][j];
     if (extendCount > 1800)
         memset(hasExtend, 0, sizeof(hasExtend));
+	memcpy(dynamicMap, defaultMap, sizeof(defaultMap));
+	for (auto p : players){
+		if (p.second.guid == g.GetSelfInfo()->guid)
+			continue;
+		auto tmp_x = (int)round(p.second.x / 1000);
+		auto tmp_y = (int)round(p.second.y / 1000);
+		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
+	}
     dijkstra({int(self->x), int(self->y)});
     // dijkstra({GridToCord(nowPosition[0]), GridToCord(nowPosition[1])});
 }
@@ -725,24 +778,6 @@ void correctPosition()
     isAct = true;
 }
 
-void calcAreaValue()
-{
-    for (auto k = 0; k < 4; ++k)
-    {
-        areaValue[k] = 1;
-        int beginX = (k / 2) * 25;
-        int beginY = (k % 2) * 25;
-        for (auto i = beginX; i < beginX + 25; ++i)
-            for (auto j = beginY; j < beginY + 25; ++j)
-            {
-                if (defaultMap[i][j]) continue;
-                if (colorMap[i][j] == 0) areaValue[k] += 50;
-                if (colorMap[i][j] == -1) areaValue[k] += 100;
-                if (enemyMap[i][j] == 1) areaValue[k] -= 10000;
-            }
-    }
-}
-
 Position findBestTarget()
 {
     int minDistance = 50000;
@@ -754,7 +789,7 @@ Position findBestTarget()
     for (auto i = 0; i < 50; ++i)
         for (auto j = 0; j < 50; ++j)
         {
-            if (defaultMap[i][j]) continue;
+            if (dynamicMap[i][j]) continue;
             if (nowPosition[0] == i && nowPosition[1] == j) continue;
             int distance = distance_table[i][j];
             if (propMap[i][j] == 1 && distance < minDistance)
@@ -771,7 +806,7 @@ Position findBestTarget()
         getItem = true;
         return bestTarget;
     }
-    if (getGridDistance(nowPosition, finalTarget) <= 3)
+    if (getGridDistance(nowPosition, finalTarget) <= 1)
 	{
 		count = (count + 1) % final_target_list.size();
         finalTarget = final_target_list[count];
@@ -787,7 +822,7 @@ Position findNearestTeamColor()
     for (auto i = 0; i < 50; ++i)
         for (auto j = 0; j < 50; ++j)
         {
-            if (defaultMap[i][j]) continue;
+            if (dynamicMap[i][j]) continue;
             if (colorMap[i][j] == 1 && distance_table[i][j] < minDistance)
             {
                 minDistance = distance_table[i][j];
@@ -804,7 +839,7 @@ void moveAction()
     {
         auto self = gameInfo->GetSelfInfo();
         nowTarget = findBestTarget();
-		std::cout << "now target " << nowTarget[0] << " , " << nowTarget[1] << std::endl;
+		// std::cout << "now target " << nowTarget[0] << " , " << nowTarget[1] << std::endl;
         std::cout << "Get item: " << getItem << std::endl;
         if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
             nowTarget = findNearestTeamColor();
@@ -814,11 +849,8 @@ void moveAction()
             lastAction = WAIT;
             return;
         }
-		std::cout << "aaa " << std::endl;
         auto l = searchWayFromMap(nowPosition, nowTarget);
-		std::cout << "bbb " << std::endl;
         double angle = getMoveAngle(l.begin());
-		std::cout << "ccc " << std::endl;
         std::cout << "MoveAngle: " << angle << std::endl;
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
         if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
