@@ -62,7 +62,7 @@ extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; //选手职业�
 
 const int ZOOM = 10;
 const int LENGTH = 50;
-static unsigned char defaultMap[LENGTH][LENGTH] = {
+const static unsigned char defaultMap[LENGTH][LENGTH] = {
 	//0                             10                            20                            30                            40                         49
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, //0
 	{1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
@@ -427,8 +427,8 @@ std::list<unsigned char> searchWayFromMap(
 	std::array<int, 2> start, std::array<int, 2> end,
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
 {
-	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
-	// std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
+	std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
+	std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
 	std::list<unsigned char> result;
 	while (1)
 	{
@@ -451,13 +451,6 @@ void initialization(GameApi& g)
     if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
     if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
 
-    if (job == PURPLE_FISH)
-    {
-        finalTarget = {4, 4};
-        getItem = false;
-        if (CordToGrid(self->x) < 5) finalTarget[0] = 45;
-        if (CordToGrid(self->y) < 5) finalTarget[1] = 45;
-    }
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
     if (nowPosition[0] == 2 && nowPosition[1] == 3) final_target_list = final_target_list_choice[0];
     else if (nowPosition[0] == 3 && nowPosition[1] == 2) final_target_list = final_target_list_choice[1];
@@ -467,6 +460,7 @@ void initialization(GameApi& g)
     else if (nowPosition[0] == 3 && nowPosition[1] == 47) final_target_list = final_target_list_choice[3];
     else if (nowPosition[0] == 46 && nowPosition[1] == 47) final_target_list = final_target_list_choice[4];
     else if (nowPosition[0] == 47 && nowPosition[1] == 46) final_target_list = final_target_list_choice[5];
+	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
 
@@ -810,6 +804,7 @@ void moveAction()
     {
         auto self = gameInfo->GetSelfInfo();
         nowTarget = findBestTarget();
+		std::cout << "now target " << nowTarget[0] << " , " << nowTarget[1] << std::endl;
         std::cout << "Get item: " << getItem << std::endl;
         if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
             nowTarget = findNearestTeamColor();
@@ -819,8 +814,11 @@ void moveAction()
             lastAction = WAIT;
             return;
         }
+		std::cout << "aaa " << std::endl;
         auto l = searchWayFromMap(nowPosition, nowTarget);
+		std::cout << "bbb " << std::endl;
         double angle = getMoveAngle(l.begin());
+		std::cout << "ccc " << std::endl;
         std::cout << "MoveAngle: " << angle << std::endl;
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
         if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
@@ -867,7 +865,7 @@ void debugInfo()
     std::cout << distance_table[nowPosition[0]][std::max(nowPosition[1] - 1, 0)] << " ";
     std::cout << distance_table[nowPosition[0]][nowPosition[1]] << " ";
     std::cout << distance_table[nowPosition[0]][std::min(nowPosition[1] + 1, 49)] << " " << std::endl;
-    std::cout << distance_table[nowPosition[0]][std::min(nowPosition[1] + 1, 49)] << " ";
+    std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][std::min(nowPosition[1] - 1, 49)] << " ";
     std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][nowPosition[1]] << " ";
     std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][std::min(nowPosition[1] + 1, 49)] << " " << std::endl;
 	std::cout << "================================" << std::endl;
