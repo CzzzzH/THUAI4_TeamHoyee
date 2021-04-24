@@ -653,6 +653,28 @@ double attackEnemyAngle()
     return -1;
 }
 
+void avoidBullet()
+{
+    auto self = gameInfo->GetSelfInfo();
+    double unitMove = self->moveSpeed / 50.0;
+    double rad = self->facingDirection;
+    for (auto bullet : gameInfo->GetBullets())
+    {
+        if (bullet->teamID != self->teamID) continue;
+        double bulletUnitMove = bullet->moveSpeed / 50.0;
+        double bulletRad = self->facingDirection;
+        double dx = self->x + unitMove * cos(rad) - bullet->x - bulletUnitMove * cos(bulletRad);
+        double dy = self->y + unitMove * sin(rad) - bullet->y - bulletUnitMove * sin(bulletRad);
+        if(dx * dx + dy * dy < self->radius)
+        {
+            gameInfo->MovePlayer(50, M_PI/2 + bulletRad);
+            lastAction = MOVE;
+            isAct = true;
+            break;
+        }
+    }
+}
+
 void attackAction()
 {
     if (isAct) return;
@@ -835,6 +857,7 @@ void AI::play(GameApi& g)
     processBegin = clock();
     updateInfo(g);
     pickAction();
+    avoidBullet();
     attackAction();
     // correctPosition();
     moveAction();

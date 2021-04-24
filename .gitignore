@@ -1,5 +1,8 @@
 /include/
 /lib/
+/x64
+.vscode/
+.idea/
 so
 a
 library
