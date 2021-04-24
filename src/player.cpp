@@ -65,9 +65,9 @@ const int LENGTH = 50;
 static unsigned char defaultMap[LENGTH][LENGTH] = {
 	//0                             10                            20                            30                            40                         49
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, //0
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 1},
-	{1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1},
+	{1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+	{1, 1, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 1, 1},
+	{1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1, 1},
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -114,9 +114,9 @@ static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 1},
-	{1, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 1},
+	{1, 1, 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 1, 1, 1},
+	{1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1},
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //49
 };
 
@@ -142,7 +142,18 @@ static bool isAct, getItem;
 static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
+const std::vector<std::vector<Position>> final_target_list_choice = {
+		{{14, 4}, {24, 14}},
+		{{5, 7}, {7, 17}},
+		{{4, 42}, {13, 27}},
+		{{8, 45}, {9, 44}},
+		{{39, 46}, {30, 27}},
+		{{46, 36}, {42, 19}},
+		{{44, 7}, {32, 25}},
+		{{36, 3}, {25, 14}}
+		};
 std::vector<Position> final_target_list;
+
 
 const std::array<int, 2> operate[] = {
 	{1, 0},
@@ -325,12 +336,12 @@ void dijkstra(const std::array<int, 2> &point)
 				avaiable[6] = 0;
 		}
 		if (
-			(defaultMap[p[1][0]][p[1][1]] && pointToLineDistance(operate[1] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 500) ||
-			(defaultMap[p[5][0]][p[5][1]] && pointToLineDistance(operate[5] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 500))
+			(defaultMap[p[1][0]][p[1][1]] && pointToLineDistance(operate[1] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600) ||
+			(defaultMap[p[5][0]][p[5][1]] && pointToLineDistance(operate[5] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 600))
 			avaiable[3] = avaiable[7] = 0;
 		if (
-			(defaultMap[p[3][0]][p[3][1]] && pointToLineDistance(operate[3] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 500) ||
-			(defaultMap[p[7][0]][p[7][1]] && pointToLineDistance(operate[7] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 500))
+			(defaultMap[p[3][0]][p[3][1]] && pointToLineDistance(operate[3] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600) ||
+			(defaultMap[p[7][0]][p[7][1]] && pointToLineDistance(operate[7] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 600))
 			avaiable[1] = avaiable[5] = 0;
 		for (int i = 0; i < 8; ++i)
 		{
@@ -339,7 +350,7 @@ void dijkstra(const std::array<int, 2> &point)
 			auto p = int_part + operate[i];
 			double distance = i % 2 ? sqrt(2) : 1;
 			frontier.push(frontier_node{distance, p});
-            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * 10;
+            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * 2;
 			else distance_table[p[0]][p[1]] = distance;
 			colorValueMap[p[0]][p[1]] = colorMap[p[0]][p[1]];
 			route[p[0]][p[1]] = i;
@@ -388,7 +399,7 @@ void dijkstra(const std::array<int, 2> &point)
 			// std::cout << "updating children :  (" << p[0] << "," << p[1] << ")" << std::endl;
 			double neighbor_distance = i % 2 ? sqrt(2) : 1;
 			if (colorMap[p[0]][p[1]] != 1)
-				neighbor_distance *= 20;
+				neighbor_distance *= 2;
 			if (dont_search[p[0]][p[1]])
 				continue;
 			if (distance_table[p[0]][p[1]] >= 0 && distance + neighbor_distance > distance_table[p[0]][p[1]])
@@ -448,14 +459,14 @@ void initialization(GameApi& g)
         if (CordToGrid(self->y) < 5) finalTarget[1] = 45;
     }
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (nowPosition[0] == 2 && nowPosition[1] == 3) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 3 && nowPosition[1] == 2) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 46 && nowPosition[1] == 2) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 47 && nowPosition[1] == 3) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 2 && nowPosition[1] == 46) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 3 && nowPosition[1] == 47) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 46 && nowPosition[1] == 47) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
-    else if (nowPosition[0] == 47 && nowPosition[1] == 46) final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+    if (nowPosition[0] == 2 && nowPosition[1] == 3) final_target_list = final_target_list_choice[0];
+    else if (nowPosition[0] == 3 && nowPosition[1] == 2) final_target_list = final_target_list_choice[1];
+    else if (nowPosition[0] == 46 && nowPosition[1] == 2) final_target_list = final_target_list_choice[6];
+    else if (nowPosition[0] == 47 && nowPosition[1] == 3) final_target_list = final_target_list_choice[7];
+    else if (nowPosition[0] == 2 && nowPosition[1] == 46) final_target_list = final_target_list_choice[2];
+    else if (nowPosition[0] == 3 && nowPosition[1] == 47) final_target_list = final_target_list_choice[3];
+    else if (nowPosition[0] == 46 && nowPosition[1] == 47) final_target_list = final_target_list_choice[4];
+    else if (nowPosition[0] == 47 && nowPosition[1] == 46) final_target_list = final_target_list_choice[5];
     srand(time(NULL));
 }
 
@@ -870,7 +881,7 @@ void AI::play(GameApi& g)
     pickAction();
     avoidBullet();
     attackAction();
-    correctPosition();
+    // correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
