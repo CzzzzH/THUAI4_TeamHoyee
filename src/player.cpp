@@ -166,6 +166,10 @@ std::array<int, 2> operator+(const std::array<int, 2>& p1, const std::array<int,
 {
 	return std::array<int, 2>{p1[0] + p2[0], p1[1] + p2[1]};
 }
+std::array<int, 2> operator+(const std::array<int, 2> &p1, int i)
+{
+	return std::array<int, 2>{p1[0] + i, p1[1] + i};
+}
 std::array<int, 2> operator-(const std::array<int, 2>& p1, const std::array<int, 2>& p2)
 {
 	return std::array<int, 2>{p1[0] - p2[0], p1[1] - p2[1]};
@@ -173,6 +177,22 @@ std::array<int, 2> operator-(const std::array<int, 2>& p1, const std::array<int,
 std::array<int, 2> operator-(const std::array<int, 2>& p1)
 {
 	return std::array<int, 2>{-p1[0], -p1[1]};
+}
+std::array<int, 2> operator*(const std::array<int, 2> &p1, int d)
+{
+	return std::array<int, 2>{p1[0] * d, p1[1] * d};
+}
+std::array<int, 2> operator/(const std::array<int, 2> &p1, int d)
+{
+	return std::array<int, 2>{p1[0] / d, p1[1] / d};
+}
+
+double pointToLineDistance(const std::array<int, 2UL> &point, const std::array<int, 2UL> &linePoint1, const std::array<int, 2UL> &linePoint2)
+{
+	double A = linePoint2[1] - linePoint1[1];
+	double B = linePoint1[0] - linePoint2[0];
+	double C = linePoint2[0] * linePoint1[1] - linePoint1[0] * linePoint2[1];
+	return fabs(A * point[0] + B * point[1] + C) / sqrt(A * A + B * B);
 }
 
 bool operator==(const std::array<int, 2UL>& p1, const std::array<int, 2UL>& p2)
@@ -303,6 +323,14 @@ void dijkstra(const std::array<int, 2> &point)
 			if (defaultMap[p[7][0]][p[7][1]])
 				avaiable[6] = 0;
 		}
+		if (
+			(defaultMap[p[1][0]][p[1][1]] && pointToLineDistance(operate[1] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 500) ||
+			(defaultMap[p[5][0]][p[5][1]] && pointToLineDistance(operate[5] * 500 + 500, decimal_part, decimal_part + (operate[3] * 500)) < 500))
+			avaiable[3] = avaiable[7] = 0;
+		if (
+			(defaultMap[p[3][0]][p[3][1]] && pointToLineDistance(operate[3] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 500) ||
+			(defaultMap[p[7][0]][p[7][1]] && pointToLineDistance(operate[7] * 500 + 500, decimal_part, decimal_part + (operate[1] * 500)) < 500))
+			avaiable[1] = avaiable[5] = 0;
 		for (int i = 0; i < 8; ++i)
 		{
 			if (!avaiable[i])
@@ -685,6 +713,8 @@ Position findBestTarget()
     Position bestTarget;
     auto self = gameInfo->GetSelfInfo();
     getItem = false;
+	std::vector<std::array<int, 2>> final_target_list = {{5, 5}, {43, 12}, {45, 45}, {5, 45}, {8, 17}};
+	static int count = 0;
 
     for (auto i = 0; i < 50; ++i)
         for (auto j = 0; j < 50; ++j)
@@ -707,7 +737,10 @@ Position findBestTarget()
         return bestTarget;
     }
     if (getGridDistance(nowPosition, finalTarget) <= 3)
-        finalTarget = {50 - finalTarget[0], 50 - finalTarget[1]};
+	{
+		count = (count + 1) % final_target_list.size();
+        finalTarget = final_target_list[count];
+	}
     bestTarget = finalTarget;
     return bestTarget;
 }
@@ -752,7 +785,7 @@ void moveAction()
             lastAction = WAIT;
             return;
         }
-        // std::cout << "Angle: " << angle << std::endl;
+        std::cout << "Angle: " << angle << std::endl;
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
@@ -803,10 +836,10 @@ void AI::play(GameApi& g)
     updateInfo(g);
     pickAction();
     attackAction();
-    correctPosition();
+    // correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
-    // debugInfo();
+    debugInfo();
     usleep(50000);
 }
