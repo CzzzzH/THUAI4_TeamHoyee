@@ -145,14 +145,10 @@ static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
 const std::vector<std::vector<Position>> final_target_list_choice = {
-		{{14, 4}, {24, 14}},
-		{{5, 7}, {7, 17}},
-		{{4, 42}, {13, 27}},
-		{{8, 45}, {9, 44}},
-		{{39, 46}, {30, 27}},
-		{{46, 36}, {42, 19}},
-		{{44, 7}, {32, 25}},
-		{{36, 3}, {25, 14}}
+		{{11, 5}, {40, 6}, {36, 27}, {11, 27}},
+		{{7, 18}, {42, 16}, {42, 41}, {6, 40}},
+		{{21, 15}, {34, 11}, {27, 25}},
+		{{25, 33}, {25, 45}}
 		};
 std::vector<Position> final_target_list;
 
@@ -497,14 +493,10 @@ void initialization(GameApi& g)
     if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (nowPosition[0] == 2 && nowPosition[1] == 3) final_target_list = final_target_list_choice[0];
-    else if (nowPosition[0] == 3 && nowPosition[1] == 2) final_target_list = final_target_list_choice[1];
-    else if (nowPosition[0] == 46 && nowPosition[1] == 2) final_target_list = final_target_list_choice[6];
-    else if (nowPosition[0] == 47 && nowPosition[1] == 3) final_target_list = final_target_list_choice[7];
-    else if (nowPosition[0] == 2 && nowPosition[1] == 46) final_target_list = final_target_list_choice[2];
-    else if (nowPosition[0] == 3 && nowPosition[1] == 47) final_target_list = final_target_list_choice[3];
-    else if (nowPosition[0] == 46 && nowPosition[1] == 47) final_target_list = final_target_list_choice[4];
-    else if (nowPosition[0] == 47 && nowPosition[1] == 46) final_target_list = final_target_list_choice[5];
+    if (nowPosition[0] == 2) final_target_list = final_target_list_choice[0];
+    else if (nowPosition[0] == 3) final_target_list = final_target_list_choice[1];
+    else if (nowPosition[0] == 46) final_target_list = final_target_list_choice[2];
+    else if (nowPosition[0] == 47) final_target_list = final_target_list_choice[3];
 	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
