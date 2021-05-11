@@ -3,8 +3,6 @@
 /a/
 /so/
 /.vscode
-*d
-*o
-.idea
-PLAYER
-include
+/src/.vscode
+/include
+/.idea
