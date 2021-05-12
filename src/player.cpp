@@ -477,7 +477,7 @@ void initialization(GameApi& g)
     auto self = g.GetSelfInfo();
     
     if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
-    if (playerJob == THUAI4::JobType::Job5) job = EGG_MAN;
+    else if (playerJob == THUAI4::JobType::Job5) job = EGG_MAN;
 
     if (job == EGG_MAN)
     {
@@ -744,6 +744,7 @@ void attackAction()
 {
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
+    std::cout << "Bullet Num: " << self->bulletNum << std::endl;
     if (self->bulletNum == 0) return;
 
     double angle = attackEnemyAngle();
@@ -752,7 +753,7 @@ void attackAction()
         if (job == PURPLE_FISH) angle = getBestExtendAngle();
         else if (job == EGG_MAN) return;
     }
-    // std::cout << "Attack Angle(Radius): " << angle << std::endl;
+    std::cout << "Attack Angle(Radius): " << angle << std::endl;
     gameInfo->Attack(0, angle);
     lastAction = ATTACK;
     isAct = true;
@@ -780,7 +781,7 @@ void correctPosition()
 Position findBestTarget()
 {
     int minDistance = INF_DISTANCE;
-    Position bestTarget;
+    Position bestTarget = {24, 24};
     auto self = gameInfo->GetSelfInfo();
 	static int count = 0;
 
@@ -788,7 +789,7 @@ Position findBestTarget()
     for (auto player : players)
     {
         if (self->teamID == player.second.teamID) continue;
-        double distance =  distance_table[player.second.x][player.second.y];
+        double distance =  distance_table[CordToGrid(player.second.x)][CordToGrid(player.second.y)];
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -797,10 +798,11 @@ Position findBestTarget()
             {
                 targetAngleR -= M_PI;
                 if (targetAngleR < 0) targetAngleR += 2 * M_PI;
-                int tempTargetX = (int)(self->x + cos(targetAngleR) * 2000);
-                int tempTargetY = (int)(self->y + sin(targetAngleR) * 2000);
+                int tempTargetX = CordToGrid(self->x + cos(targetAngleR) * 2000);
+                int tempTargetY = CordToGrid(self->y + sin(targetAngleR) * 2000);
                 bestTarget = {std::max(0, std::min(49, tempTargetX)), std::max(0, std::min(49, tempTargetY))};
                 unColoredDistance = 1;
+                canStepUnColored = false;
             }
             else if (job == EGG_MAN)
             {
@@ -816,27 +818,29 @@ Position findBestTarget()
         }
     }
 
-    std::cout << "Min Distance: " << minDistance << std::endl;
-    std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
+    std::cout << "Min Distance 1: " << minDistance << std::endl;
+    std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
+    if (minDistance > 10000 && job == PURPLE_FISH)
+        minDistance = INF_DISTANCE;
     if (minDistance < INF_DISTANCE)
         return bestTarget;
 
     // Second to get items
     for (auto prop : props)
 	{
-		double distance = distance_table[prop.second.x][prop.second.y];
+		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
 		if (distance < minDistance)
 		{
 			// std::cout << "Prop at: " << i << " " << j << std::endl;
 			minDistance = distance;
-			bestTarget = {(int)prop.second.x, (int)prop.second.y};
+			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
 		}
 	}
-
-    std::cout << "Min Distance: " << minDistance << std::endl;
-    std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
     
+    std::cout << "Min Distance 2: " << minDistance << std::endl;
+    std::cout << "Best Target 2: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
+
     if (minDistance < INF_DISTANCE)
         return bestTarget;
 
@@ -844,21 +848,25 @@ Position findBestTarget()
     if (getGridDistance(nowPosition, finalTarget) <= 2)
 	{
 		count = (count + 1) % final_target_list.size();
-        finalTarget = final_target_list[count];
-        if (job == PURPLE_FISH) canStepUnColored = false;
-        else if (job == EGG_MAN)
-        {
-            if (self->bulletNum  < 2) 
-            {
-                unColoredDistance = 10;
-                canStepUnColored = false;
-            }
-            else if (self->bulletNum == 2) unColoredDistance = 5;
-            else if (self->bulletNum == 3) unColoredDistance = 2;
-            else unColoredDistance = 1;
-        }   
+        finalTarget = final_target_list[count];   
 	}
+    if (job == PURPLE_FISH) canStepUnColored = false;
+    else if (job == EGG_MAN)
+    {
+        if (self->bulletNum  < 2) 
+        {
+            unColoredDistance = 10;
+            canStepUnColored = false;
+        }
+        else if (self->bulletNum == 2) unColoredDistance = 5;
+        else if (self->bulletNum == 3) unColoredDistance = 2;
+        else unColoredDistance = 1;
+    }
     bestTarget = finalTarget;
+
+    std::cout << "Min Distance 3: " << minDistance << std::endl;
+    std::cout << "Best Target 3: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
+
     return bestTarget;
 }
 
@@ -866,7 +874,7 @@ void moveAction()
 {
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
-    
+    std::cout << "???" << std::endl;
     nowTarget = findBestTarget();
     if (nowTarget == nowPosition)
     {
@@ -878,7 +886,7 @@ void moveAction()
     auto l = searchWayFromMap(nowPosition, nowTarget);
     if (*l.begin() == DONT_MOVE)
     {
-        // std::cout << "WAIT(2)!: " << std::endl;
+        std::cout << "WAIT(2)!: " << std::endl;
         lastAction = WAIT;
         return;
     }
@@ -898,6 +906,7 @@ void debugInfo()
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
+    std::cout << "CanStepUnColored: " << canStepUnColored << std::endl;
     std::cout << "Last Action: " << lastAction << std::endl;
     std::cout << "Last Attack Angle: " << lastAttackAngle << std::endl;
     std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")" << std::endl;
