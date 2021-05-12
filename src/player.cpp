@@ -530,10 +530,18 @@ void refreshColorMap()
 
 void refreshPlayers()
 {
+	for (auto p = players.begin(); p != players.end(); ++p)
+	{
+		auto self = gameInfo->GetSelfInfo();
+		if (getPointToPointDistance(p->second.x, p->second.y, self->x, self->y)  < 5000)
+			players.erase(p);
+	}
 	auto new_players = gameInfo->GetCharacters();
 	auto self = gameInfo->GetSelfInfo();
     for (auto p : new_players)
 	{
+		if (p->guid == self->guid)
+			continue;
 		if (players.find(p->guid) != players.end())
 			players.erase(p->guid);
 		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
@@ -543,6 +551,12 @@ void refreshPlayers()
 
 void refreshProps()
 {
+	for (auto p = props.begin(); p != props.end(); ++p)
+	{
+		auto self = gameInfo->GetSelfInfo();
+		if (getPointToPointDistance(p->second.x, p->second.y, self->x, self->y)  < 5000)
+			props.erase(p);
+	}
 	auto new_props = gameInfo->GetProps();
 	for (auto p : new_props)
 	{
