@@ -131,7 +131,6 @@ static Job job;
 const unsigned char DONT_MOVE = 8;
 static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
-static bool dont_search[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 // static char propMap[LENGTH][LENGTH];
@@ -270,13 +269,14 @@ inline int GridToCord(int value)
 
 void dijkstra(const std::array<int, 2> &point)
 {
+	bool dont_search[LENGTH][LENGTH] = {{0}};
 	memset(route, DONT_MOVE, sizeof(route));
 	memset(colorValueMap, 0, sizeof(colorValueMap));
 	// std::cout << sizeof(route) << std::endl;
 	__gnu_pbds::priority_queue<frontier_node, std::greater<frontier_node>> frontier;
-	std::fill_n(distance_table, 50*50, MAX_DISTANCE);
-	memset(dont_search, 0, sizeof(dont_search));
-
+	for (int i = 0; i<50; ++i)
+		for(int j = 0; j<50; ++j)
+			distance_table[i][j] = MAX_DISTANCE;
 	std::array<int, 2> int_part = {int(point[0] / 1000), int(point[1] / 1000)};
 	std::array<int, 2> decimal_part = {point[0] % 1000, point[1] % 1000};
 
@@ -302,10 +302,6 @@ void dijkstra(const std::array<int, 2> &point)
 					avaiable[(i + 8 - 1) % 8] = 0;
 					avaiable[(i + 1) % 8] = 0;
 				}
-			}
-			if (!canStepUnColored && (colorMap[p[i][0]][p[i][1]] != 1) && (colorMap[int_part[0]][int_part[1]] == 1))
-			{
-				avaiable[i] = 0;
 			}
 		}
 		if (decimal_part[1] < 500)
@@ -418,54 +414,47 @@ void dijkstra(const std::array<int, 2> &point)
 	}
 }
 
+Position findNearestAvaiablePoint(Position p)
+{
+	for (int i = 0 ; i < 10 ; ++i)
+	{
+		for (int x = std::max(p[0] - i, 0) ; x <= std::min(p[0] + i, 49) ; ++x)
+		{
+			for (int y = std::max(p[1] - i, 0); y <= std::min(p[1] + i, 49) ; y += 2*i)
+				if(!dynamicMap[x][y])
+				{
+					return {x, y};
+				}
+		}
+		for (int y = std::max(p[1] - i + 1, 0) ; y <= std::min(p[1] + i - 1, 49) ; ++y)
+		{
+			for (int x = std::max(p[0] - i, 0) ; x <= std::min(p[0] + i, 49) ; x += 2*i)
+				if(!dynamicMap[x][y])
+				{
+					return {x, y};
+				}
+		}
+	}
+	return p;
+}
+
 std::list<unsigned char> searchWayFromMap(
 	std::array<int, 2> start, std::array<int, 2> end,
 	std::function<void(std::array<int, 2>)> func = [](std::array<int, 2> p) {})
 {
 	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
 	// std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
-	auto new_end = end;
-	if (dynamicMap[end[0]][end[1]])
-	{
-		for (int i = 1 ; i < 10 ; ++i)
-		{
-			bool is_break = false;
-			for (int x = std::max(end[0] - i, 0) ; x <= std::min(end[0] + i, 49) ; ++x)
-			{
-				for (int y = std::max(end[1] - i, 0); y <= std::min(end[1] + i, 49) ; y += 2*i)
-					if(!dynamicMap[x][y])
-					{
-						new_end = {x, y};
-						is_break = true;
-						break;
-					}
-			}
-			if (is_break)
-				break;
-			for (int y = std::max(end[1] - i + 1, 0) ; y <= std::min(end[1] + i - 1, 49) ; ++y)
-			{
-				for (int x = std::max(end[0] - i, 0) ; x <= std::min(end[0] + i, 49) ; x += 2*i)
-					if(!dynamicMap[x][y])
-					{
-						new_end = {x, y};
-						is_break = true;
-						break;
-					}
-			}
-			if (is_break)
-				break;
-		}
-	}
+	auto new_end = findNearestAvaiablePoint(end);
 	// std::cout << "new end : " << new_end[0] << "," << new_end[1] <<std::endl;
 	std::list<unsigned char> result;
 	while (1)
 	{
 		func(new_end);
-		result.push_front(route[new_end[0]][new_end[1]]);
 		if (new_end == start)
 			break;
         if (route[new_end[0]][new_end[1]] == DONT_MOVE)
             break;
+		result.push_front(route[new_end[0]][new_end[1]]);
 		// std::cout << new_end[0] << "  " << new_end[1] << "  " << (int)route[new_end[0]][new_end[1]] << std::endl;
 		new_end = new_end - operate[route[new_end[0]][new_end[1]]];
 		// std::cout<<"eee"<<std::endl;
