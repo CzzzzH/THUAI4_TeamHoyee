@@ -115,6 +115,10 @@ const static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //49
 };
 
+
+static bool canStepUnColored = true;
+static int unColoredDistance = 10;
+const static double MAX_DISTANCE = 9999999999;
 unsigned char dynamicMap[LENGTH][LENGTH];
 
 std::unordered_map<int64_t, THUAI4::Character> players;
@@ -124,6 +128,7 @@ static GameApi* gameInfo;
 static State currentState;
 static Action lastAction;
 static Job job;
+const unsigned char DONT_MOVE = 8;
 static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
 static bool dont_search[LENGTH][LENGTH];
@@ -265,11 +270,11 @@ inline int GridToCord(int value)
 
 void dijkstra(const std::array<int, 2> &point)
 {
-	memset(route, 8, sizeof(route));
+	memset(route, DONT_MOVE, sizeof(route));
 	memset(colorValueMap, 0, sizeof(colorValueMap));
 	// std::cout << sizeof(route) << std::endl;
 	__gnu_pbds::priority_queue<frontier_node, std::greater<frontier_node>> frontier;
-	memset(distance_table, -1, sizeof(distance_table));
+	std::fill_n(distance_table, 50*50, MAX_DISTANCE);
 	memset(dont_search, 0, sizeof(dont_search));
 
 	std::array<int, 2> int_part = {int(point[0] / 1000), int(point[1] / 1000)};
@@ -297,6 +302,10 @@ void dijkstra(const std::array<int, 2> &point)
 					avaiable[(i + 8 - 1) % 8] = 0;
 					avaiable[(i + 1) % 8] = 0;
 				}
+			}
+			if (!canStepUnColored && (colorMap[p[i][0]][p[i][1]] != 1) && (colorMap[int_part[0]][int_part[1]] == 1))
+			{
+				avaiable[i] = 0;
 			}
 		}
 		if (decimal_part[1] < 500)
@@ -342,7 +351,7 @@ void dijkstra(const std::array<int, 2> &point)
 			auto p = int_part + operate[i];
 			double distance = i % 2 ? sqrt(2) : 1;
 			frontier.push(frontier_node{distance, p});
-            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * 6;
+            if (colorMap[p[0]][p[1]] != 1) distance_table[p[0]][p[1]] = distance * unColoredDistance;
 			else distance_table[p[0]][p[1]] = distance;
 			colorValueMap[p[0]][p[1]] = colorMap[p[0]][p[1]];
 			route[p[0]][p[1]] = i;
@@ -363,23 +372,21 @@ void dijkstra(const std::array<int, 2> &point)
 		// std::cout << "distance :  " << distance << std::endl;
 		dont_search[searching_point[0]][searching_point[1]] = 1;
 		memset(avaiable, 1, sizeof(avaiable));
-		for (int i = 0; i < 8; i += 2)
+		for (int i = 0; i < 8; i ++)
 		{
 			auto p = searching_point + operate[i];
 			if (dynamicMap[p[0]][p[1]])
 			{
 				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
-				avaiable[(i + 8 - 1) % 8] = 0;
-				avaiable[(i + 1) % 8] = 0;
+				if (!(i % 2))
+				{
+					avaiable[(i + 8 - 1) % 8] = 0;
+					avaiable[(i + 1) % 8] = 0;
+				}
 			}
-		}
-		for (int i = 1; i < 8; i += 2)
-		{
-			auto p = searching_point + operate[i];
-			if (dynamicMap[p[0]][p[1]])
+			if (!canStepUnColored && (colorMap[p[0]][p[1]] != 1) && (colorMap[searching_point[0]][searching_point[1]] == 1))
 			{
-				// std::cout << "setting unavaiable : " << i << std::endl;
 				avaiable[i] = 0;
 			}
 		}
@@ -391,10 +398,10 @@ void dijkstra(const std::array<int, 2> &point)
 			// std::cout << "updating children :  (" << p[0] << "," << p[1] << ")" << std::endl;
 			double neighbor_distance = i % 2 ? sqrt(2) : 1;
 			if (colorMap[p[0]][p[1]] != 1)
-				neighbor_distance *= 6;
+				neighbor_distance *= unColoredDistance;
 			if (dont_search[p[0]][p[1]])
 				continue;
-			if (distance_table[p[0]][p[1]] >= 0 && distance + neighbor_distance > distance_table[p[0]][p[1]])
+			if (distance_table[p[0]][p[1]] < MAX_DISTANCE && distance + neighbor_distance > distance_table[p[0]][p[1]])
 				continue;
 			auto iter = frontier.begin();
 			for (; iter != frontier.end(); iter++)
@@ -422,42 +429,32 @@ std::list<unsigned char> searchWayFromMap(
 	// std::cout << "start : " << start[0] << "," << start[1] <<std::endl;
 	// std::cout << "end : " << end[0] << "," << end[1] <<std::endl;
 	auto new_end = end;
-	if (route[end[0]][end[1]] > 7 || route[end[0]][end[1]] < 0)
+	if (dynamicMap[end[0]][end[1]])
 	{
 		for (int i = 1 ; i < 10 ; ++i)
 		{
 			bool is_break = false;
 			for (int x = std::max(end[0] - i, 0) ; x <= std::min(end[0] + i, 49) ; ++x)
 			{
-				if(!dynamicMap[x][end[1] - i])
-				{
-					new_end = {x, end[1] - i};
-					is_break = true;
-					break;
-				}
-				if(!dynamicMap[x][end[1] + i])
-				{
-					new_end = {x, end[1] + i};
-					is_break = true;
-					break;
-				}
+				for (int y = std::max(end[1] - i, 0); y <= std::min(end[1] + i, 49) ; y += 2*i)
+					if(!dynamicMap[x][y])
+					{
+						new_end = {x, y};
+						is_break = true;
+						break;
+					}
 			}
 			if (is_break)
 				break;
-			for (int y = std::max(end[0] - i + 1, 0) ; y <= std::min(end[0] + i - 1, 49) ; ++y)
+			for (int y = std::max(end[1] - i + 1, 0) ; y <= std::min(end[1] + i - 1, 49) ; ++y)
 			{
-				if(!dynamicMap[end[0] - i][y])
-				{
-					new_end = {end[0] - i, y};
-					is_break = true;
-					break;
-				}
-				if(!dynamicMap[end[0] + i][y])
-				{
-					new_end = {end[0] + i, y};
-					is_break = true;
-					break;
-				}
+				for (int x = std::max(end[0] - i, 0) ; x <= std::min(end[0] + i, 49) ; x += 2*i)
+					if(!dynamicMap[x][y])
+					{
+						new_end = {x, y};
+						is_break = true;
+						break;
+					}
 			}
 			if (is_break)
 				break;
@@ -468,11 +465,11 @@ std::list<unsigned char> searchWayFromMap(
 	while (1)
 	{
 		func(new_end);
+		result.push_front(route[new_end[0]][new_end[1]]);
 		if (new_end == start)
 			break;
-        if (route[new_end[0]][new_end[1]] < 0 || route[new_end[0]][new_end[1]] >= 8)
+        if (route[new_end[0]][new_end[1]] == DONT_MOVE)
             break;
-		result.push_front(route[new_end[0]][new_end[1]]);
 		// std::cout << new_end[0] << "  " << new_end[1] << "  " << (int)route[new_end[0]][new_end[1]] << std::endl;
 		new_end = new_end - operate[route[new_end[0]][new_end[1]]];
 		// std::cout<<"eee"<<std::endl;
@@ -840,15 +837,19 @@ void moveAction()
             return;
         }
         auto l = searchWayFromMap(nowPosition, nowTarget);
+		if (*l.begin() == DONT_MOVE)
+		{
+			// std::cout << "WAIT(2)!: " << std::endl;
+            lastAction = WAIT;
+            return;
+		}
         double angle = getMoveAngle(l.begin());
         // std::cout << "MoveAngle: " << angle << std::endl;
         nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
-        if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
-        {
-            // std::cout << "WAIT(2)!: " << std::endl;
-            lastAction = WAIT;
-            return;
-        }
+        // if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
+        // {
+            
+        // }
         // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
         // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
         // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
