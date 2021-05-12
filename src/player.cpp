@@ -450,13 +450,20 @@ std::list<unsigned char> searchWayFromMap(
 	while (1)
 	{
 		func(new_end);
+		result.push_front(route[new_end[0]][new_end[1]]);
 		if (new_end == start)
 			break;
         if (route[new_end[0]][new_end[1]] == DONT_MOVE)
             break;
-		result.push_front(route[new_end[0]][new_end[1]]);
 		// std::cout << new_end[0] << "  " << new_end[1] << "  " << (int)route[new_end[0]][new_end[1]] << std::endl;
-		new_end = new_end - operate[route[new_end[0]][new_end[1]]];
+		Position old_end = new_end;
+		new_end = old_end - operate[route[old_end[0]][old_end[1]]];
+		if (new_end == start)
+		{
+			if(!canStepUnColored && (colorMap[new_end[0]][new_end[1]] == 1) && (colorMap[old_end[0]][old_end[1]] != 1))
+				result.push_front(DONT_MOVE);
+			break;
+		}
 		// std::cout<<"eee"<<std::endl;
 	}
 	return result;
