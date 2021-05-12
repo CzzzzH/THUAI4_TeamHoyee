@@ -129,8 +129,8 @@ static double distance_table[LENGTH][LENGTH];
 static bool dont_search[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
-static char propMap[LENGTH][LENGTH];
-static char enemyMap[LENGTH][LENGTH];
+// static char propMap[LENGTH][LENGTH];
+// static char enemyMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int frame = 0;
 static int lastX, lastY, lastAttackAngle;
@@ -506,8 +506,8 @@ void refreshColorMap()
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 				continue;
-            propMap[i][j] = 0;
-            enemyMap[i][j] = 0;
+            // propMap[i][j] = 0;
+            // enemyMap[i][j] = 0;
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
@@ -530,7 +530,7 @@ void refreshPlayers()
 			players.erase(p->guid);
 		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
         // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
-        if (p->teamID != self->teamID) enemyMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
+        // if (p->teamID != self->teamID) enemyMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -544,7 +544,7 @@ void refreshProps()
 			props.erase(p->guid);
 		props.insert(std::make_pair(p->guid, THUAI4::Prop(*p)));
         // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
-        propMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
+        // propMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -598,7 +598,7 @@ void pickAction()
             if (CordToGrid(prop->x) == nowPosition[0] && CordToGrid(prop->y) == nowPosition[1])
             {
                 gameInfo->Pick(prop->propType);
-                propMap[nowPosition[0]][nowPosition[1]] = 0;
+                // propMap[nowPosition[0]][nowPosition[1]] = 0;
                 lastAction = PICK;
                 isAct = true;
             }
@@ -779,19 +779,16 @@ Position findBestTarget()
     getItem = false;
 	static int count = 0;
 
-    for (auto i = 0; i < 50; ++i)
-        for (auto j = 0; j < 50; ++j)
-        {
-            if (dynamicMap[i][j]) continue;
-            if (nowPosition[0] == i && nowPosition[1] == j) continue;
-            int distance = distance_table[i][j];
-            if (propMap[i][j] == 1 && distance < minDistance)
-            {
-                // std::cout << "Prop at: " << i << " " << j << std::endl;
-                minDistance = distance;
-                bestTarget = {i, j};
-            }
-        }
+    for (auto p : props)
+	{
+		int distance = distance_table[p.second.x][p.second.y];
+		if (distance < minDistance)
+		{
+			// std::cout << "Prop at: " << i << " " << j << std::endl;
+			minDistance = distance;
+			bestTarget = {(int)p.second.x, (int)p.second.y};
+		}
+	}
     // std::cout << "Min Distance: " << minDistance << std::endl;
     // std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
     if (minDistance < 50000)

@@ -6,3 +6,6 @@
 /src/.vscode
 /include
 /.idea
+*.d
+*.o
+PLAYER
