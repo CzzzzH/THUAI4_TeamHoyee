@@ -385,10 +385,6 @@ void dijkstra(const std::array<int, 2> &point)
 					avaiable[(i + 1) % 8] = 0;
 				}
 			}
-			if (!canStepUnColored && (colorMap[p[0]][p[1]] != 1) && (colorMap[searching_point[0]][searching_point[1]] == 1))
-			{
-				avaiable[i] = 0;
-			}
 		}
 		for (int i = 0; i < 8; ++i)
 		{
