@@ -375,6 +375,7 @@ void dijkstra(const std::array<int, 2> &point)
 				}
 			}
 		}
+
 		for (int i = 0; i < 8; ++i)
 		{
 			if (!avaiable[i])
@@ -557,6 +558,7 @@ void updateInfo(GameApi& g)
 		auto tmp_y = (int)round((double)p.second.y / 1000.0);
 		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
 	}
+    dijkstra({int(self->x), int(self->y)});
 }
 
 void updateEnd()
@@ -766,24 +768,11 @@ Position findBestTarget()
     auto self = gameInfo->GetSelfInfo();
 	static int count = 0;
 
-    // First to get items
-    for (auto prop : props)
-	{
-		double distance = getPointToPointDistance(self->x, self->y, prop.second.x, prop.second.y);
-		if (distance < minDistance)
-		{
-			// std::cout << "Prop at: " << i << " " << j << std::endl;
-			minDistance = distance;
-            unColoredDistance = 1;
-			bestTarget = {(int)prop.second.x, (int)prop.second.y};
-		}
-	}
-
-    // Second to approach or aloof the enemy
+    // First to approach or aloof the enemy
     for (auto player : players)
     {
         if (self->teamID == player.second.teamID) continue;
-        double distance =  getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
+        double distance =  distance_table[player.second.x][player.second.y];
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -811,8 +800,26 @@ Position findBestTarget()
         }
     }
 
-    // std::cout << "Min Distance: " << minDistance << std::endl;
-    // std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
+    std::cout << "Min Distance: " << minDistance << std::endl;
+    std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
+
+    if (minDistance < INF_DISTANCE)
+        return bestTarget;
+
+    // Second to get items
+    for (auto prop : props)
+	{
+		double distance = distance_table[prop.second.x][prop.second.y];
+		if (distance < minDistance)
+		{
+			// std::cout << "Prop at: " << i << " " << j << std::endl;
+			minDistance = distance;
+			bestTarget = {(int)prop.second.x, (int)prop.second.y};
+		}
+	}
+
+    std::cout << "Min Distance: " << minDistance << std::endl;
+    std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
     
     if (minDistance < INF_DISTANCE)
         return bestTarget;
@@ -875,6 +882,7 @@ void debugInfo()
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
+    std::cout << "Last Action: " << lastAction << std::endl;
     std::cout << "Last Attack Angle: " << lastAttackAngle << std::endl;
     std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")" << std::endl;
 	std::cout << "NowPosition(Cord): (" << self->x << "," << self->y << ")" << std::endl;
@@ -913,10 +921,10 @@ void AI::play(GameApi& g)
     pickAction();
     avoidBullet();
     attackAction();
-    correctPosition();
+    // correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
-    // debugInfo();
+    debugInfo();
     usleep(50000);
 }
