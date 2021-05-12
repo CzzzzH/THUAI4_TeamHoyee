@@ -43,9 +43,8 @@ struct frontier_node
 	}
 };
 
-enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
 enum Action {MOVE, ATTACK, PICK, USE, WAIT};
-enum Job {LAZY_GOAT, MONKEY_DOCTOR, PURPLE_FISH};
+enum Job {PURPLE_FISH, EGG_MAN};
 
 /****************************************/
 /*                                      */
@@ -53,7 +52,8 @@ enum Job {LAZY_GOAT, MONKEY_DOCTOR, PURPLE_FISH};
 /*                                      */
 /****************************************/
 
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; //选手职业，选手 !!必须!! 定义此变量来选择职业
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
 
 const int ZOOM = 10;
 const int LENGTH = 50;
@@ -115,7 +115,6 @@ const static unsigned char defaultMap[LENGTH][LENGTH] = {
 	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //49
 };
 
-
 static bool canStepUnColored = true;
 static int unColoredDistance = 10;
 const static double MAX_DISTANCE = 9999999999;
@@ -125,16 +124,15 @@ std::unordered_map<int64_t, THUAI4::Character> players;
 std::unordered_map<int64_t, THUAI4::Prop> props;
 
 static GameApi* gameInfo;
-static State currentState;
 static Action lastAction;
 static Job job;
+
+const int INF_DISTANCE = 0x3f3f3f3f;
 const unsigned char DONT_MOVE = 8;
 static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
-// static char propMap[LENGTH][LENGTH];
-// static char enemyMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int frame = 0;
 static int lastX, lastY, lastAttackAngle;
@@ -142,12 +140,7 @@ static bool isAct, getItem;
 static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
-const std::vector<std::vector<Position>> final_target_list_choice = {
-		{{11, 5}, {40, 6}, {36, 27}, {11, 27}},
-		{{7, 18}, {42, 16}, {42, 41}, {6, 40}},
-		{{21, 15}, {34, 11}, {27, 25}},
-		{{25, 33}, {25, 45}}
-		};
+static std::vector<std::vector<Position>> final_target_list_choice;
 std::vector<Position> final_target_list;
 
 
@@ -466,9 +459,27 @@ void initialization(GameApi& g)
 {
     auto self = g.GetSelfInfo();
     
-    if (playerJob == THUAI4::JobType::Job2) job = LAZY_GOAT;
     if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
-    if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
+    if (playerJob == THUAI4::JobType::Job5) job = EGG_MAN;
+
+    if (job == EGG_MAN)
+    {
+        final_target_list_choice= {
+            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
+            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
+            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
+            {{8, 8}, {8, 41}, {41, 8}, {41, 41}}
+            };
+    }
+    else if (job == PURPLE_FISH)
+    {
+        final_target_list_choice= {
+            {{11, 5}, {40, 6}, {36, 27}, {11, 27}},
+            {{7, 18}, {42, 16}, {42, 41}, {6, 40}},
+            {{21, 15}, {34, 11}, {27, 25}},
+            {{25, 33}, {25, 45}}
+            };
+    }
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
     if (nowPosition[0] == 2) final_target_list = final_target_list_choice[0];
@@ -488,8 +499,6 @@ void refreshColorMap()
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 				continue;
-            // propMap[i][j] = 0;
-            // enemyMap[i][j] = 0;
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
@@ -511,8 +520,6 @@ void refreshPlayers()
 		if (players.find(p->guid) != players.end())
 			players.erase(p->guid);
 		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
-        // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
-        // if (p->teamID != self->teamID) enemyMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -525,8 +532,6 @@ void refreshProps()
 		if (props.find(p->guid) != props.end())
 			props.erase(p->guid);
 		props.insert(std::make_pair(p->guid, THUAI4::Prop(*p)));
-        // std::cout << CordToGrid(p->x) << " " << CordToGrid(p->y) << std::endl;
-        // propMap[CordToGrid(p->x)][CordToGrid(p->y)] = 1;
 	}
 }
 
@@ -536,6 +541,8 @@ void updateInfo(GameApi& g)
         initialization(g);
     frame++;
     isAct = false;
+    canStepUnColored = true;
+    unColoredDistance = 10;
     gameInfo = &g;
     auto self = g.GetSelfInfo();
     nowPosition = {CordToGrid(self->x), CordToGrid(self->y)};
@@ -550,8 +557,6 @@ void updateInfo(GameApi& g)
 		auto tmp_y = (int)round((double)p.second.y / 1000.0);
 		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
 	}
-    dijkstra({int(self->x), int(self->y)});
-    // dijkstra({GridToCord(nowPosition[0]), GridToCord(nowPosition[1])});
 }
 
 void updateEnd()
@@ -659,7 +664,7 @@ double getBestExtendAngle()
 
 double attackEnemyAngle()
 {
-    double res = -1, minDistance = 3000;
+    double res = -1, minDistance = INF_DISTANCE;
     auto targetPlayers = gameInfo->GetCharacters();
 	auto self = gameInfo->GetSelfInfo();
     for (auto player: targetPlayers)
@@ -673,6 +678,7 @@ double attackEnemyAngle()
         }
 	}
     // std::cout << "Attack Angle: " << res << std::endl;
+    if (job == EGG_MAN && minDistance > 1000 * sqrt(2)) return -1;
     return res;
 }
 
@@ -720,18 +726,18 @@ void attackAction()
 {
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
-    if (self->bulletNum == 0)
-        currentState = WAIT_BULLET;
-    else
+    if (self->bulletNum == 0) return;
+
+    double angle = attackEnemyAngle();
+    if (angle < 0)
     {
-        double angle = attackEnemyAngle();
-        if (angle < 0) angle = getBestExtendAngle();
-        // std::cout << "Attack Angle(Radius): " << angle << std::endl;
-        gameInfo->Attack(0, angle);
-        lastAction = ATTACK;
-        isAct = true;
-        currentState = EXPAND_FIELD;
+        if (job == PURPLE_FISH) angle = getBestExtendAngle();
+        else if (job == EGG_MAN) return;
     }
+    // std::cout << "Attack Angle(Radius): " << angle << std::endl;
+    gameInfo->Attack(0, angle);
+    lastAction = ATTACK;
+    isAct = true;
 }
 
 void correctPosition()
@@ -755,94 +761,113 @@ void correctPosition()
 
 Position findBestTarget()
 {
-    int minDistance = 50000;
+    int minDistance = INF_DISTANCE;
     Position bestTarget;
     auto self = gameInfo->GetSelfInfo();
-    getItem = false;
 	static int count = 0;
 
-    for (auto p : props)
+    // First to get items
+    for (auto prop : props)
 	{
-		int distance = distance_table[p.second.x][p.second.y];
+		double distance = getPointToPointDistance(self->x, self->y, prop.second.x, prop.second.y);
 		if (distance < minDistance)
 		{
 			// std::cout << "Prop at: " << i << " " << j << std::endl;
 			minDistance = distance;
-			bestTarget = {(int)p.second.x, (int)p.second.y};
+            unColoredDistance = 1;
+			bestTarget = {(int)prop.second.x, (int)prop.second.y};
 		}
 	}
+
+    // Second to approach or aloof the enemy
+    for (auto player : players)
+    {
+        if (self->teamID == player.second.teamID) continue;
+        double distance =  getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
+        if (distance < minDistance)
+        {
+            minDistance = distance;
+            double targetAngleR = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
+            if (job == PURPLE_FISH)
+            {
+                targetAngleR -= M_PI;
+                if (targetAngleR < 0) targetAngleR += 2 * M_PI;
+                int tempTargetX = (int)(self->x + cos(targetAngleR) * 2000);
+                int tempTargetY = (int)(self->y + sin(targetAngleR) * 2000);
+                bestTarget = {std::max(0, std::min(49, tempTargetX)), std::max(0, std::min(49, tempTargetY))};
+                unColoredDistance = 1;
+            }
+            else if (job == EGG_MAN)
+            {
+                bestTarget = {CordToGrid(player.second.x), CordToGrid(player.second.y)};
+                if (self->bulletNum  == 0) 
+                {
+                    unColoredDistance = 10;
+                    canStepUnColored = false;
+                }
+                else if (self->bulletNum == 1) unColoredDistance = 3;
+                else unColoredDistance = 1;
+            }
+        }
+    }
+
     // std::cout << "Min Distance: " << minDistance << std::endl;
     // std::cout << "Best Target: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
-    if (minDistance < 50000)
-    {
-        getItem = true;
+    
+    if (minDistance < INF_DISTANCE)
         return bestTarget;
-    }
-    if (getGridDistance(nowPosition, finalTarget) <= 1)
+
+    // No item or enemy, set a defualt target 
+    if (getGridDistance(nowPosition, finalTarget) <= 2)
 	{
 		count = (count + 1) % final_target_list.size();
         finalTarget = final_target_list[count];
+        if (job == PURPLE_FISH) canStepUnColored = false;
+        else if (job == EGG_MAN)
+        {
+            if (self->bulletNum  < 2) 
+            {
+                unColoredDistance = 10;
+                canStepUnColored = false;
+            }
+            else if (self->bulletNum == 2) unColoredDistance = 5;
+            else if (self->bulletNum == 3) unColoredDistance = 2;
+            else unColoredDistance = 1;
+        }   
 	}
     bestTarget = finalTarget;
     return bestTarget;
 }
 
-Position findNearestTeamColor()
-{   
-    double minDistance = 500000;
-    Position res;
-    for (auto i = 0; i < 50; ++i)
-        for (auto j = 0; j < 50; ++j)
-        {
-            if (dynamicMap[i][j]) continue;
-            if (colorMap[i][j] == 1 && distance_table[i][j] < minDistance)
-            {
-                minDistance = distance_table[i][j];
-                res = {i, j};
-            }
-        }
-    return res;
-}
-
 void moveAction()
 {
     if (isAct) return;
-    if (currentState == WAIT_BULLET)
+    auto self = gameInfo->GetSelfInfo();
+    
+    nowTarget = findBestTarget();
+    if (nowTarget == nowPosition)
     {
-        auto self = gameInfo->GetSelfInfo();
-        nowTarget = findBestTarget();
-		// std::cout << "now target " << nowTarget[0] << " , " << nowTarget[1] << std::endl;
-        // std::cout << "Get item: " << getItem << std::endl;
-        if (!getItem && colorMap[nowPosition[0]][nowPosition[1]] != 1 && colorMap[nextPosition[0]][nextPosition[1]] != 1) 
-            nowTarget = findNearestTeamColor();
-        if (nowTarget == nowPosition)
-        {
-            // std::cout << "WAIT(1)!: " << std::endl;
-            lastAction = WAIT;
-            return;
-        }
-        auto l = searchWayFromMap(nowPosition, nowTarget);
-		if (*l.begin() == DONT_MOVE)
-		{
-			// std::cout << "WAIT(2)!: " << std::endl;
-            lastAction = WAIT;
-            return;
-		}
-        double angle = getMoveAngle(l.begin());
-        // std::cout << "MoveAngle: " << angle << std::endl;
-        nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
-        // if (!getItem && colorMap[nextPosition[0]][nextPosition[1]] != 1 && colorMap[nowPosition[0]][nowPosition[1]] == 1)
-        // {
-            
-        // }
-        // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
-        // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
-        // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
-        // std::cout << "MoveAngle: " << angle << std::endl;
-        gameInfo->MovePlayer(50, angle);
-        lastAction = MOVE;
-        isAct = true;
+        // std::cout << "WAIT(1)!: " << std::endl;
+        lastAction = WAIT;
+        return;
     }
+    dijkstra({int(self->x), int(self->y)});
+    auto l = searchWayFromMap(nowPosition, nowTarget);
+    if (*l.begin() == DONT_MOVE)
+    {
+        // std::cout << "WAIT(2)!: " << std::endl;
+        lastAction = WAIT;
+        return;
+    }
+    double angle = getMoveAngle(l.begin());
+    nextPosition = {nowPosition[0] + dirX[*l.begin()], nowPosition[1] + dirY[*l.begin()]};
+    // std::cout << "MoveSpeed: " << self->moveSpeed << std::endl;
+    // std::cout << "nextPositionX: " << nextPosition[0] << std::endl;
+    // std::cout << "nextPositionY: " << nextPosition[1] << std::endl;
+    // std::cout << "MoveAngle: " << angle << std::endl;
+    gameInfo->MovePlayer(50, angle);
+    lastAction = MOVE;
+    isAct = true;
 }
 
 void debugInfo()
