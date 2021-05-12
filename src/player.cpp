@@ -411,21 +411,30 @@ Position findNearestAvaiablePoint(Position p)
 {
 	for (int i = 0 ; i < 10 ; ++i)
 	{
+		std::cout << "i : " << i << std::endl;
 		for (int x = std::max(p[0] - i, 0) ; x <= std::min(p[0] + i, 49) ; ++x)
 		{
-			for (int y = std::max(p[1] - i, 0); y <= std::min(p[1] + i, 49) ; y += 2*i)
+			// std::cout << "x : " << x << std::endl;
+			for (int y : {std::max(p[1] - i, 0), std::min(p[1] + i, 49)})
+			{
+				// std::cout << "y : " << y << std::endl;
 				if(!dynamicMap[x][y])
 				{
 					return {x, y};
 				}
+			}
 		}
 		for (int y = std::max(p[1] - i + 1, 0) ; y <= std::min(p[1] + i - 1, 49) ; ++y)
 		{
-			for (int x = std::max(p[0] - i, 0) ; x <= std::min(p[0] + i, 49) ; x += 2*i)
+			// std::cout << "y : " << y << std::endl;
+			for (int x : {std::max(p[0] - i, 0), std::min(p[0] + i, 49)})
+			{
+				// std::cout << "x : " << x << std::endl;
 				if(!dynamicMap[x][y])
 				{
 					return {x, y};
 				}
+			}
 		}
 	}
 	return p;
