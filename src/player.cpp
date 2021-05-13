@@ -998,6 +998,59 @@ void moveAction()
     isAct = true;
 }
 
+int getSelfPlayerID()
+{
+	int self_playerID = 0;
+	for (auto i = 0; i < gameInfo->GetPlayerGUIDs()[gameInfo->GetSelfInfo()->teamID].size(); ++i) 
+	{
+		if (gameInfo->GetSelfInfo()->guid == gameInfo->GetPlayerGUIDs()[gameInfo->GetSelfInfo()->teamID][i])
+		{
+			self_playerID = i;
+			break;
+		}
+	}
+	return self_playerID;
+}
+
+void sendMessage()
+{
+	auto self_playerID = getSelfPlayerID();
+	auto self = gameInfo->GetSelfInfo();
+	for (int i = 0; i < 3; ++i)
+	{
+		if (i == self_playerID)
+			continue;
+		std::string strToSend;
+		strToSend.push_back((char)CordToGrid(self->x));
+		strToSend.push_back((char)CordToGrid(self->y));
+		auto new_players = gameInfo->GetCharacters();
+		for (auto p : new_players)
+		{
+			if (p->guid == self->guid)
+				continue;
+			strToSend.push_back((char)CordToGrid(p->x));
+			strToSend.push_back((char)CordToGrid(p->y));
+		}
+		gameInfo->Send(i, strToSend);
+	}
+}
+
+void recieveMessage()
+{
+	auto self_playerID = getSelfPlayerID();
+	std::string recieveStr;
+	std::cout << "Recieved : " << std::endl;
+	while (gameInfo->TryGetMessage(recieveStr))
+	{
+		std::cout << "\t";
+		for (auto c : recieveStr)
+		{
+			std::cout << (int)c << " ";
+		}
+		std::cout << std::endl;
+	}
+}
+
 void debugInfo()
 {
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
@@ -1049,6 +1102,8 @@ void AI::play(GameApi& g)
     moveAction();
     updateEnd();
     processEnd = clock();
+	sendMessage();
+	recieveMessage();
     debugInfo();
     usleep(50000);
 }
