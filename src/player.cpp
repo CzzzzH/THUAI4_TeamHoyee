@@ -705,7 +705,7 @@ double attackEnemyAngle()
 	auto self = gameInfo->GetSelfInfo();
     for (auto player: targetPlayers)
     {
-        if (self->teamID == player->teamID) continue;
+        if (self->teamID == player->teamID || player->isDying) continue;
         double distance = getPointToPointDistance(self->x, self->y, player->x, player->y);
         if (distance < minDistance)
         {
@@ -714,6 +714,7 @@ double attackEnemyAngle()
         }
 	}
     // std::cout << "Attack Angle: " << res << std::endl;
+    if (job == PURPLE_FISH) return -1;
     if (job == EGG_MAN && minDistance > 1000 * sqrt(2)) return -1;
     return res;
 }
@@ -962,7 +963,7 @@ void AI::play(GameApi& g)
     processBegin = clock();
     updateInfo(g);
     pickAction();
-    avoidBullet();
+    // avoidBullet();
     attackAction();
     // correctPosition();
     moveAction();
