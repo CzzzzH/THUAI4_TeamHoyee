@@ -524,10 +524,8 @@ void initialization(GameApi& g)
     }
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
+    if (nowPosition[1] < 25) final_target_list = final_target_list_choice[0];
     else final_target_list = final_target_list_choice[1];
-    // else if (nowPosition[0] == 46) final_target_list = final_target_list_choice[2];
-    // else if (nowPosition[0] == 47) final_target_list = final_target_list_choice[3];
 	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
