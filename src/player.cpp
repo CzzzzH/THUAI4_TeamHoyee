@@ -43,6 +43,25 @@ struct frontier_node
 	}
 };
 
+const int bulletBomb[7] = {3, 3, 7, 1, 7, 3, 3};
+struct bulletCache
+{
+	uint16_t teamID;
+	double facingDirection;
+	double moveSpeed;
+	double avoidRad;
+	double tmpx;
+	double tmpy;
+	int type;
+	bulletCache(uint16_t i, double f, double m, double avoidRad, double tmpx, double tmpy, int type) : 
+	teamID(i), facingDirection(f), moveSpeed(m), avoidRad(avoidRad), tmpx(tmpx), tmpy(tmpy), type(type){}
+	bool operator<(const bulletCache& a) const
+	{
+    	return moveSpeed < a.moveSpeed;
+	}
+};
+
+enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
 enum Action {MOVE, ATTACK, PICK, USE, WAIT};
 enum Job {PURPLE_FISH, EGG_MAN};
 
@@ -142,7 +161,7 @@ static clock_t processBegin, processEnd;
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
 static std::vector<std::vector<Position>> final_target_list_choice;
 std::vector<Position> final_target_list;
-
+std::priority_queue<bulletCache> bulletNow;
 
 const std::array<int, 2> operate[] = {
 	{1, 0},
@@ -720,7 +739,6 @@ void avoidBullet()
     auto self = gameInfo->GetSelfInfo();
     double unitMove = self->moveSpeed / 50.0;
     double rad = self->facingDirection;
-    // std::cout << "Bullet Size: " << gameInfo->GetBullets().size() << std::endl;
     for (auto bullet : gameInfo->GetBullets())
     {
         if (bullet->teamID == self->teamID) continue;
@@ -728,30 +746,62 @@ void avoidBullet()
         double bulletRad = bullet->facingDirection;
         double dx = self->x + unitMove * cos(rad) - bullet->x - bulletUnitMove * cos(bulletRad);
         double dy = self->y + unitMove * sin(rad) - bullet->y - bulletUnitMove * sin(bulletRad);
-        if((dx * dx + dy * dy) < ((bullet->radius + self-> radius) * (bullet->radius + self-> radius) * 20))
-        {
-            if((std::abs(dx * cos(bulletRad) + dy * sin(bulletRad)) / sqrt(dx *dx + dy * dy)) > 0.7)
-            {
-                if((dx * cos(M_PI / 2 + bulletRad) + dy * sin(M_PI / 2 + bulletRad)) < 0)
-                {
-                    gameInfo->MovePlayer(50, - M_PI / 2 + bulletRad);
-                }
-                else
-                {
-                    gameInfo->MovePlayer(50, M_PI / 2 + bulletRad);
-                }
-            }
-
-            // if(atan(std::abs(dx)/std::abs(dy)) + bulletRad < M_PI)
-            // {
-            //     unsigned char block1 = defaultMap[int((dx + cos(M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(M_PI/2 + bulletRad) * 1000)/1000)];
-            //     unsigned char block2 = defaultMap[int((dx + cos(- M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(- M_PI/2 + bulletRad) * 1000)/1000)];
-            // }
-            lastAction = MOVE;
-            isAct = true;
-            break;
-        }
+		double delx = self->x - bullet->x;
+		double dely = self->y - bullet->y;
+		double distance = sqrt(delx *delx + dely * dely);
+		double bomb = bulletBomb[(int)bullet->bulletType];
+		double cosRad = std::abs(delx * cos(bulletRad) + dely * sin(bulletRad)) / sqrt(delx *delx + dely * dely);
+		double tanRad = tan(acos(cosRad));
+		if(tanRad * distance > bomb)
+		{
+			int type = (int)bullet->bulletType;
+			// if((dx * dx + dy * dy) < ((bulletBomb[type] * 1000 + bullet->moveSpeed + self-> radius) * (bulletBomb[type] * 1000 + bullet->moveSpeed + self-> radius) * (bullet->moveSpeed / self->moveSpeed)))
+			{
+				double avoidRad = 0;
+				if((dx * cos(M_PI / 2 + bulletRad) + dy * sin(M_PI / 2 + bulletRad)) < 0)
+					avoidRad = - M_PI / 2 + bulletRad;
+				else
+					avoidRad = M_PI / 2 + bulletRad;
+				if(bulletNow.size() <= 3)
+					bulletNow.push({bullet->teamID, bullet->facingDirection, bullet->moveSpeed, avoidRad, self->x, self->y, type});
+			}
+		}
+		// if(atan(std::abs(dx)/std::abs(dy)) + bulletRad < M_PI)
+		// {
+		//     unsigned char block1 = defaultMap[int((dx + cos(M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(M_PI/2 + bulletRad) * 1000)/1000)];
+		//     unsigned char block2 = defaultMap[int((dx + cos(- M_PI/2 + bulletRad) * 1000)/1000)][int((dy + sin(- M_PI/2 + bulletRad) * 1000)/1000)];
+		// }
     }
+	if(!bulletNow.empty())
+	{
+		bulletCache bullet = bulletNow.top();
+		gameInfo->MovePlayer(50, bullet.avoidRad);
+		lastAction = MOVE;
+		isAct = true;
+		double dx = self->x - bullet.tmpx;
+		double dy = self->y - bullet.tmpy;
+		double bomb = bulletBomb[bullet.type] * 1000;
+		printf("%d %d\n", dx * dx + dy * dy, bomb * bomb);
+		bool safe = true;
+		for (auto bullet : gameInfo->GetBullets())
+		{
+			if (bullet->teamID == self->teamID) continue;
+			double bulletUnitMove = bullet->moveSpeed / 50.0;
+			double bulletRad = bullet->facingDirection;
+			double dx = self->x - bullet->x;
+			double dy = self->y - bullet->y;
+			if((std::abs(dx * cos(bulletRad) + dy * sin(bulletRad)) / sqrt(dx *dx + dy * dy)) > 0.5)
+			{
+				safe = false;
+			}
+		}
+		if(dx *dx + dy * dy > 2 * bomb * bomb || safe)
+		{
+			printf("%d %d", dx * dx + dy * dy, bomb * bomb);
+			while (!bulletNow.empty()) bulletNow.pop();
+		}
+	}
+
 }
 
 void attackAction()
