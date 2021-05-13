@@ -748,7 +748,7 @@ double attackEnemyAngle()
     {
         std::cout << "Player: " << player.second.guid << " " << player.second.x << " " << player.second.y;
         if (self->teamID == player.second.teamID || player.second.hp <= 0 || player.second.isDying) continue;
-        double distance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.x);
+        double distance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -896,7 +896,7 @@ Position findBestTarget()
             else if (job == EGG_MAN || job == MONKEY_DOCTOR)
             {
                 bestTarget = {CordToGrid(player.second.x), CordToGrid(player.second.y)};
-                if (nowBulletNum  != self->maxBulletNum) 
+                if (nowBulletNum != self->maxBulletNum) 
                 {
                     unColoredDistance = 10;
                     canStepUnColored = false;
@@ -910,9 +910,10 @@ Position findBestTarget()
     std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
     if (directDistance > 4998 && job == PURPLE_FISH)
-    {
         minDistance = MAX_DISTANCE + 1;
-    }
+    if (nowBulletNum == 0 && job == MONKEY_DOCTOR && colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        minDistance = MAX_DISTANCE + 1;
+
     if (minDistance < MAX_DISTANCE + 1)
     {
         if (job == PURPLE_FISH)
