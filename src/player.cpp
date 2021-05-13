@@ -71,8 +71,8 @@ enum Job {PURPLE_FISH, EGG_MAN};
 /*                                      */
 /****************************************/
 
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
 
 const int ZOOM = 10;
 const int LENGTH = 50;
@@ -549,11 +549,13 @@ void refreshColorMap()
 
 void refreshPlayers()
 {
-	for (auto p = players.begin(); p != players.end(); ++p)
+	for (auto p = players.begin(); p != players.end();)
 	{
 		auto self = gameInfo->GetSelfInfo();
 		if (getPointToPointDistance(p->second.x, p->second.y, self->x, self->y)  < 5000)
-			players.erase(p);
+			players.erase(p++);
+        else
+            p++;
 	}
 	auto new_players = gameInfo->GetCharacters();
 	auto self = gameInfo->GetSelfInfo();
@@ -570,11 +572,13 @@ void refreshPlayers()
 
 void refreshProps()
 {
-	for (auto p = props.begin(); p != props.end(); ++p)
+	for (auto p = props.begin(); p != props.end(); )
 	{
 		auto self = gameInfo->GetSelfInfo();
 		if (getPointToPointDistance(p->second.x, p->second.y, self->x, self->y)  < 5000)
-			props.erase(p);
+			props.erase(p++);
+        else
+            p++;
 	}
 	auto new_props = gameInfo->GetProps();
 	for (auto p : new_props)
@@ -851,8 +855,8 @@ Position findBestTarget()
 
     // First to approach or aloof the enemy
     for (auto player : players)
-    {
-        if (self->teamID == player.second.teamID) continue;
+    {   
+        if (self->teamID == player.second.teamID || player.second.isDying) continue;
         double distance =  distance_table[CordToGrid(player.second.x)][CordToGrid(player.second.y)];
         if (distance < minDistance)
         {
