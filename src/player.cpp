@@ -440,7 +440,7 @@ Position findNearestAvaiablePoint(Position p)
 			for (int y : {std::max(p[1] - i, 0), std::min(p[1] + i, 49)})
 			{
 				// std::cout << "y : " << y << std::endl;
-				if(!dynamicMap[x][y])
+				if(route[x][y] != DONT_MOVE)
 				{
 					return {x, y};
 				}
@@ -452,7 +452,7 @@ Position findNearestAvaiablePoint(Position p)
 			for (int x : {std::max(p[0] - i, 0), std::min(p[0] + i, 49)})
 			{
 				// std::cout << "x : " << x << std::endl;
-				if(!dynamicMap[x][y])
+				if(route[x][y] != DONT_MOVE)
 				{
 					return {x, y};
 				}
@@ -630,6 +630,8 @@ void updateInfo(GameApi& g)
 	for (auto p : players){
 		if (p.second.guid == g.GetSelfInfo()->guid)
 			continue;
+		if (p.second.teamID != g.GetSelfInfo()->teamID)
+			continue;
 		auto tmp_x = (int)round((double)p.second.x / 1000.0);
 		auto tmp_y = (int)round((double)p.second.y / 1000.0);
 		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
@@ -748,7 +750,7 @@ double attackEnemyAngle()
         {
             minDistance = distance;
             attackTime = int(minDistance / 18. + 0.5);
-            attackHp = player.second.hp;
+            // attackHp = player.second.hp;
             res = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
         }
 	}
