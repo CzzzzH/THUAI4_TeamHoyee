@@ -627,13 +627,13 @@ void updateInfo(GameApi& g)
 	refreshPlayers();
 	refreshProps();
 	memcpy(dynamicMap, defaultMap, sizeof(defaultMap));
-	for (auto p : players){
-		if (p.second.guid == g.GetSelfInfo()->guid)
+	for (auto p : gameInfo->GetCharacters()){
+		if (p->guid == g.GetSelfInfo()->guid)
 			continue;
-		if (p.second.teamID != g.GetSelfInfo()->teamID)
+		if (p->teamID != g.GetSelfInfo()->teamID)
 			continue;
-		auto tmp_x = (int)round((double)p.second.x / 1000.0);
-		auto tmp_y = (int)round((double)p.second.y / 1000.0);
+		auto tmp_x = (int)round((double)p->x / 1000.0);
+		auto tmp_y = (int)round((double)p->y / 1000.0);
 		dynamicMap[tmp_x][tmp_y] = dynamicMap[tmp_x - 1][tmp_y] = dynamicMap[tmp_x - 1][tmp_y - 1] = dynamicMap[tmp_x][tmp_y - 1] = 1;
 	}
     dijkstra({int(self->x), int(self->y)});
@@ -1034,6 +1034,7 @@ void sendMessage()
 				continue;
 			strToSend.push_back((char)CordToGrid(p->x));
 			strToSend.push_back((char)CordToGrid(p->y));
+			strToSend.push_back((char)(p->hp / 100));
 		}
 		gameInfo->Send(i, strToSend);
 	}
@@ -1061,6 +1062,8 @@ void recieveMessage()
 			c.x = GridToCord((int)recieveStr[i]);
 			++i;
 			c.y = GridToCord((int)recieveStr[i]);
+			++i;
+			c.hp = int(recieveStr[i]) * 100;
 			++i;
 			players.insert(std::make_pair(-i, c));
 		}
@@ -1106,7 +1109,7 @@ void debugInfo()
 	std::cout << "Players:" << std::endl;
 	for (auto p : players)
 	{
-		std::cout << "\t" << p.first << " : " << p.second.x << " , " << p.second.y << std::endl;
+		std::cout << "\t" << p.first << " : " << p.second.x << " , " << p.second.y << "hp: " << p.second.hp << std::endl;
 	}
 	std::cout << "================================" << std::endl;
     std::cout << std::endl;
