@@ -753,7 +753,7 @@ double attackEnemyAngle()
         {
             minDistance = distance;
             attackTime = int(minDistance / 18. + 0.5);
-            // attackHp = player.second.hp;
+            attackHp = player.second.hp;
             res = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
         }
 	}
