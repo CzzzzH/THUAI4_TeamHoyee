@@ -501,27 +501,33 @@ void initialization(GameApi& g)
     if (job == EGG_MAN)
     {
         final_target_list_choice= {
-            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
-            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
-            {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
-            {{8, 8}, {8, 41}, {41, 8}, {41, 41}}
+            {{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
+		     {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
+		     {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
+            {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}}
+            // {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
+            // {{8, 8}, {8, 41}, {41, 8}, {41, 41}}
             };
     }
     else if (job == PURPLE_FISH)
     {
         final_target_list_choice= {
-            {{11, 5}, {40, 6}, {36, 27}, {11, 27}},
-            {{7, 18}, {42, 16}, {42, 41}, {6, 40}},
-            {{21, 15}, {34, 11}, {27, 25}},
-            {{25, 33}, {25, 45}}
+			{{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
+		     {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
+		     {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
+            {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}}
+            // {{11, 5}, {40, 6}, {36, 27}, {11, 27}},
+            // {{7, 18}, {42, 16}, {42, 41}, {6, 40}},
+            // {{21, 15}, {34, 11}, {27, 25}},
+            // {{25, 33}, {25, 45}}
             };
     }
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (nowPosition[0] == 2) final_target_list = final_target_list_choice[0];
-    else if (nowPosition[0] == 3) final_target_list = final_target_list_choice[1];
-    else if (nowPosition[0] == 46) final_target_list = final_target_list_choice[2];
-    else if (nowPosition[0] == 47) final_target_list = final_target_list_choice[3];
+    if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
+    else final_target_list = final_target_list_choice[1];
+    // else if (nowPosition[0] == 46) final_target_list = final_target_list_choice[2];
+    // else if (nowPosition[0] == 47) final_target_list = final_target_list_choice[3];
 	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
