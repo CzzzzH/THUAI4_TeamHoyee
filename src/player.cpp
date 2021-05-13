@@ -153,7 +153,7 @@ static double distance_table[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static double areaValue[4];
-static int frame = 0;
+static int frame = 0, tiredFrame = 0;
 static int attackTime = 0, attackHp = 0;
 static int nowBulletNum = 0;
 static int lastX, lastY, lastAttackAngle;
@@ -626,6 +626,8 @@ void updateInfo(GameApi& g)
     refreshColorMap();
 	refreshPlayers();
 	refreshProps();
+    if (colorMap[nowPosition[0]][nowPosition[1]] != 1) tiredFrame++;
+    else tiredFrame = 0;
 	memcpy(dynamicMap, defaultMap, sizeof(defaultMap));
 	for (auto p : players){
 		if (p.second.guid == g.GetSelfInfo()->guid)
@@ -840,19 +842,20 @@ void attackAction()
     double angle = attackEnemyAngle();
     if (angle < 0)
     {
-        if (job == PURPLE_FISH) angle = getBestExtendAngle();
-        else if (job == EGG_MAN || job == MONKEY_DOCTOR) return;
+        if (job == PURPLE_FISH && nowBulletNum > 1) angle = getBestExtendAngle();
+        else return;
     }
     // std::cout << "Attack Angle(Radius): " << angle << std::endl;
     if (job == PURPLE_FISH)
     {
         gameInfo->Attack(0, angle);
+        nowBulletNum--;
     }
     else
     {
         while (nowBulletNum > 0 && attackHp > 0)
         {
-            attackHp -= 4000;
+            attackHp -= 3500;
             nowBulletNum--;
             gameInfo->Attack(attackTime, angle);
         }
@@ -912,12 +915,24 @@ Position findBestTarget()
     {
         if (job == PURPLE_FISH)
         {
-            auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
-            while (fabs(tempTargetAngleR - targetAngleR) > 90)
+            auto countBegin = count;
+            double minAngleOffset = M_PI;
+            int bestCount = count;
+            for (int i = 0; i < final_target_list.size(); ++i)
             {
+                auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
+                auto angleOffset = fabs(tempTargetAngleR - targetAngleR); 
+                if (angleOffset > M_PI) angleOffset = 2 * M_PI - angleOffset;
+                std::cout << count << " " << angleOffset << std::endl;
+                if (angleOffset < minAngleOffset)
+                {
+                    minAngleOffset = angleOffset;
+                    bestCount = count;
+                }
                 count = (count + 1) % final_target_list.size();
-                tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
             }
+            count = bestCount;
+            finalTarget = final_target_list[count];   
         }
         return bestTarget;
     }
@@ -930,7 +945,9 @@ Position findBestTarget()
 		{
 			// std::cout << "Prop at: " << i << " " << j << std::endl;
 			minDistance = distance;
+            targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
 			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
+            if (job == PURPLE_FISH && nowBulletNum < 1) canStepUnColored = false;
 		}
 	}
     
@@ -978,14 +995,18 @@ void moveAction()
     {
         // std::cout << "WAIT(1)!: " << std::endl;
         lastAction = WAIT;
+        isAct = true;
         return;
     }
     dijkstra({int(self->x), int(self->y)});
     auto l = searchWayFromMap(nowPosition, nowTarget);
+    if (job == PURPLE_FISH && tiredFrame > 20 && nowBulletNum > 0)
+        gameInfo->Attack(0, getPointToPointAngle(self->x, self->y, GridToCord(nowPosition[0]), GridToCord(nowPosition[1]))); 
     if (*l.begin() == DONT_MOVE)
     {
         std::cout << "WAIT(2)!: " << std::endl;
         lastAction = WAIT;
+        isAct = true;
         return;
     }
     double angle = getMoveAngle(l.begin());
@@ -1057,6 +1078,7 @@ void debugInfo()
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
+    std::cout << "tiredFrame: " << tiredFrame << std::endl;
     std::cout << "NowBulletNum: " << nowBulletNum << std::endl;
     std::cout << "maxBulletNum: " << self->maxBulletNum << std::endl;
     std::cout << "CanStepUnColored: " << canStepUnColored << std::endl;
