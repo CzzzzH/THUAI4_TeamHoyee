@@ -71,9 +71,9 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR};
 /*                                      */
 /****************************************/
 
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey doctor
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Mandoctor
 
 const int ZOOM = 10;
 const int LENGTH = 50;
@@ -742,6 +742,7 @@ double attackEnemyAngle()
 	auto self = gameInfo->GetSelfInfo();
     for (auto player: players)
     {
+        std::cout << "Player: " << player.second.guid << " " << player.second.x << " " << player.second.y;
         if (self->teamID == player.second.teamID || player.second.hp <= 0 || player.second.isDying) continue;
         double distance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.x);
         if (distance < minDistance)
@@ -859,28 +860,11 @@ void attackAction()
     lastAction = ATTACK;
 }
 
-void correctPosition()
-{
-    if (isAct) return;
-    auto self = gameInfo->GetSelfInfo();
-    if (!(lastAction == MOVE && lastX == self->x && lastY == self->y)) return;
-    auto centerX = GridToCord(nowPosition[0]); 
-    auto centerY = GridToCord(nowPosition[1]); 
-    auto angleR = getPointToPointAngle(self->x, self->y, centerX, centerY);
-    auto distance = getPointToPointDistance(self->x, self->y, centerX, centerY);
-    uint32_t time = uint32_t(distance / double(self->moveSpeed) * 1000);
-    // std::cout << "Correct Position Angle(Degree): " << radianToAngle(angleR) << std::endl;
-    // std::cout << "Correct Position Distance: " << distance << std::endl;
-    // std::cout << "Correct Position Time: " << time << std::endl;
-    if (frame % 2 == 0) gameInfo->MovePlayer(50, angleR + 0.1);
-    else gameInfo->MovePlayer(50, angleR + 0.1);
-    lastAction = MOVE;
-    isAct = true;
-}
-
 Position findBestTarget()
 {
     double minDistance = MAX_DISTANCE + 1;
+    double directDistance = 0;
+    double targetAngleR = 0;
     Position bestTarget = {24, 24};
     auto self = gameInfo->GetSelfInfo();
 	static int count = 0;
@@ -893,16 +877,16 @@ Position findBestTarget()
         if (distance < minDistance)
         {
             minDistance = distance;
-            double targetAngleR = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
+            directDistance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
+            targetAngleR = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
             if (job == PURPLE_FISH)
             {
                 targetAngleR -= M_PI;
                 if (targetAngleR < 0) targetAngleR += 2 * M_PI;
-                int tempTargetX = CordToGrid(self->x + cos(targetAngleR) * 2000);
-                int tempTargetY = CordToGrid(self->y + sin(targetAngleR) * 2000);
+                int tempTargetX = CordToGrid(self->x + cos(targetAngleR) * 5000);
+                int tempTargetY = CordToGrid(self->y + sin(targetAngleR) * 5000);
                 bestTarget = {std::max(0, std::min(49, tempTargetX)), std::max(0, std::min(49, tempTargetY))};
                 unColoredDistance = 1;
-                canStepUnColored = false;
             }
             else if (job == EGG_MAN || job == MONKEY_DOCTOR)
             {
@@ -920,10 +904,23 @@ Position findBestTarget()
     std::cout << "Min Distance 1: " << minDistance << std::endl;
     std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
-    if (minDistance > 10000 && job == PURPLE_FISH)
+    if (directDistance > 4998 && job == PURPLE_FISH)
+    {
         minDistance = MAX_DISTANCE + 1;
+    }
     if (minDistance < MAX_DISTANCE + 1)
+    {
+        if (job == PURPLE_FISH)
+        {
+            auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
+            while (fabs(tempTargetAngleR - targetAngleR) > 90)
+            {
+                count = (count + 1) % final_target_list.size();
+                tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
+            }
+        }
         return bestTarget;
+    }
 
     // Second to get items
     for (auto prop : props)
@@ -944,12 +941,16 @@ Position findBestTarget()
         return bestTarget;
 
     // No item or enemy, set a defualt target 
-    if (getGridDistance(nowPosition, finalTarget) <= 2)
+    if (getGridDistance(nowPosition, finalTarget) <= 5)
 	{
 		count = (count + 1) % final_target_list.size();
         finalTarget = final_target_list[count];   
 	}
-    if (job == PURPLE_FISH) canStepUnColored = false;
+    if (job == PURPLE_FISH)
+    {
+        canStepUnColored = false;
+        unColoredDistance = 10;
+    }
     else if (job == EGG_MAN || job == MONKEY_DOCTOR)
     {
         if (nowBulletNum != self->maxBulletNum) 
@@ -1059,6 +1060,7 @@ void debugInfo()
     std::cout << "NowBulletNum: " << nowBulletNum << std::endl;
     std::cout << "maxBulletNum: " << self->maxBulletNum << std::endl;
     std::cout << "CanStepUnColored: " << canStepUnColored << std::endl;
+    std::cout << "unColoredDistance: " << unColoredDistance << std::endl;
     std::cout << "Last Action: " << lastAction << std::endl;
     std::cout << "Last Attack Angle: " << lastAttackAngle << std::endl;
     std::cout << "LastPosition(Cord): (" << lastX << "," << lastY << ")" << std::endl;
@@ -1095,15 +1097,14 @@ void AI::play(GameApi& g)
 {
     processBegin = clock();
     updateInfo(g);
+    sendMessage();
+	recieveMessage();
     pickAction();
     avoidBullet();
     attackAction();
-    // correctPosition();
     moveAction();
     updateEnd();
     processEnd = clock();
-	sendMessage();
-	recieveMessage();
     debugInfo();
     usleep(50000);
 }
