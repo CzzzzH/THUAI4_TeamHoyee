@@ -63,7 +63,7 @@ struct bulletCache
 
 enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
 enum Action {MOVE, ATTACK, PICK, USE, WAIT};
-enum Job {PURPLE_FISH, EGG_MAN};
+enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR};
 
 /****************************************/
 /*                                      */
@@ -72,7 +72,8 @@ enum Job {PURPLE_FISH, EGG_MAN};
 /****************************************/
 
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey doctor
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
 
 const int ZOOM = 10;
 const int LENGTH = 50;
@@ -146,7 +147,6 @@ static GameApi* gameInfo;
 static Action lastAction;
 static Job job;
 
-const int INF_DISTANCE = 0x3f3f3f3f;
 const unsigned char DONT_MOVE = 8;
 static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
@@ -154,6 +154,8 @@ static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int frame = 0;
+static int attackTime = 0, attackHp = 0;
+static int nowBulletNum = 0;
 static int lastX, lastY, lastAttackAngle;
 static bool isAct, getItem;
 static clock_t processBegin, processEnd;
@@ -496,36 +498,52 @@ void initialization(GameApi& g)
     auto self = g.GetSelfInfo();
     
     if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
+    else if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
     else if (playerJob == THUAI4::JobType::Job5) job = EGG_MAN;
 
-    if (job == EGG_MAN)
+    final_target_list_choice =
     {
-        final_target_list_choice= {
-            {{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
-		     {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
-		     {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
-            {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}}
-            // {{8, 8}, {8, 41}, {41, 8}, {41, 41}},
-            // {{8, 8}, {8, 41}, {41, 8}, {41, 41}}
-            };
-    }
-    else if (job == PURPLE_FISH)
-    {
-        final_target_list_choice= {
-			{{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
-		     {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
-		     {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
-            {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}}
-            // {{11, 5}, {40, 6}, {36, 27}, {11, 27}},
-            // {{7, 18}, {42, 16}, {42, 41}, {6, 40}},
-            // {{21, 15}, {34, 11}, {27, 25}},
-            // {{25, 33}, {25, 45}}
-            };
-    }
+        // Route 0 for Purple Fish(LeftUpper Corner)
+        {{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
+            {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
+            {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
+        // Route 1 for Purple fish(LeftUpper Corner)
+        {{6, 14}, {6, 24}, {6, 34}, {6, 44}, {9, 44}, {20, 44}, 
+            {30, 44}, {41, 44}, {44, 44}, {44, 35}, {44, 26}, {44, 16}, 
+            {44, 6}, {34, 6}, {25, 15}, {16, 6}, {6, 6}},
+        // Route 2 for Purple fish(LeftBottom Corner)
+        {{44, 6}, {34, 6}, {25, 15}, {16, 6}, {6, 6},
+            {6, 14}, {6, 24}, {6, 34}, {6, 44}, {9, 44}, {20, 44}, 
+            {30, 44}, {41, 44}, {44, 44}, {44, 35}, {44, 26}, {44, 16}},
+        // Route 3 for Purple Fish(LeftBottom Corner)
+        {{44, 16}, {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44},
+            {20, 44}, {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14},
+            {6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}},
+        // Route 4 for Purple Fish
+        {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}},
+        // Route 5 for Monkey Docter & Egg Man
+        {{25, 25}, {36, 15}, {36, 25}, {36, 34}, {26, 34}, {16, 34}, {16, 24}, {16, 15}}
+    };
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (nowPosition[1] < 25) final_target_list = final_target_list_choice[0];
-    else final_target_list = final_target_list_choice[1];
+    if (job == MONKEY_DOCTOR || job == EGG_MAN)  final_target_list = final_target_list_choice[5];
+    else if (job == PURPLE_FISH)
+    {
+        if (nowPosition[1] < 25)
+        {
+            if (nowPosition[0] < 25)
+            {
+                if (nowPosition[1] == 2) final_target_list = final_target_list_choice[0];
+                if (nowPosition[1] == 3) final_target_list = final_target_list_choice[1];
+            }
+            if (nowPosition[0] > 25)
+            {
+                if (nowPosition[1] == 2) final_target_list = final_target_list_choice[2];
+                if (nowPosition[1] == 3) final_target_list = final_target_list_choice[3];
+            } 
+        }
+        if (nowPosition[1] > 25) final_target_list = final_target_list_choice[4];
+    }
 	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
@@ -604,6 +622,7 @@ void updateInfo(GameApi& g)
     gameInfo = &g;
     auto self = g.GetSelfInfo();
     nowPosition = {CordToGrid(self->x), CordToGrid(self->y)};
+    nowBulletNum = self->bulletNum;
     refreshColorMap();
 	refreshPlayers();
 	refreshProps();
@@ -634,20 +653,16 @@ void pickAction()
     {
         gameInfo->Use();
         lastAction = USE;
-        isAct = true;
     }
-    else
+    
+    auto props = gameInfo->GetProps();
+    for (auto prop: props)
     {
-        auto props = gameInfo->GetProps();
-        for (auto prop: props)
+        if (CordToGrid(prop->x) == nowPosition[0] && CordToGrid(prop->y) == nowPosition[1])
         {
-            if (CordToGrid(prop->x) == nowPosition[0] && CordToGrid(prop->y) == nowPosition[1])
-            {
-                gameInfo->Pick(prop->propType);
-                // propMap[nowPosition[0]][nowPosition[1]] = 0;
-                lastAction = PICK;
-                isAct = true;
-            }
+            gameInfo->Pick(prop->propType);
+            // propMap[nowPosition[0]][nowPosition[1]] = 0;
+            lastAction = PICK;
         }
     }
 }
@@ -723,17 +738,18 @@ double getBestExtendAngle()
 
 double attackEnemyAngle()
 {
-    double res = -1, minDistance = INF_DISTANCE;
-    auto targetPlayers = gameInfo->GetCharacters();
+    double res = -1, minDistance = MAX_DISTANCE + 1;
 	auto self = gameInfo->GetSelfInfo();
-    for (auto player: targetPlayers)
+    for (auto player: players)
     {
-        if (self->teamID == player->teamID || player->isDying) continue;
-        double distance = getPointToPointDistance(self->x, self->y, player->x, player->y);
+        if (self->teamID == player.second.teamID || player.second.hp <= 0 || player.second.isDying) continue;
+        double distance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.x);
         if (distance < minDistance)
         {
             minDistance = distance;
-            res = getPointToPointAngle(self->x, self->y, player->x, player->y);
+            attackTime = int(minDistance / 18. + 0.5);
+            attackHp = player.second.hp;
+            res = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
         }
 	}
     // std::cout << "Attack Angle: " << res << std::endl;
@@ -817,19 +833,30 @@ void attackAction()
 {
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
-    std::cout << "Bullet Num: " << self->bulletNum << std::endl;
-    if (self->bulletNum == 0) return;
+    // std::cout << "Bullet Num: " << nowBulletNum << std::endl;
+    if (nowBulletNum == 0) return;
 
     double angle = attackEnemyAngle();
     if (angle < 0)
     {
         if (job == PURPLE_FISH) angle = getBestExtendAngle();
-        else if (job == EGG_MAN) return;
+        else if (job == EGG_MAN || job == MONKEY_DOCTOR) return;
     }
-    std::cout << "Attack Angle(Radius): " << angle << std::endl;
-    gameInfo->Attack(0, angle);
+    // std::cout << "Attack Angle(Radius): " << angle << std::endl;
+    if (job == PURPLE_FISH)
+    {
+        gameInfo->Attack(0, angle);
+    }
+    else
+    {
+        while (nowBulletNum > 0 && attackHp > 0)
+        {
+            attackHp -= 4000;
+            nowBulletNum--;
+            gameInfo->Attack(attackTime, angle);
+        }
+    }
     lastAction = ATTACK;
-    isAct = true;
 }
 
 void correctPosition()
@@ -853,7 +880,7 @@ void correctPosition()
 
 Position findBestTarget()
 {
-    int minDistance = INF_DISTANCE;
+    double minDistance = MAX_DISTANCE + 1;
     Position bestTarget = {24, 24};
     auto self = gameInfo->GetSelfInfo();
 	static int count = 0;
@@ -861,7 +888,7 @@ Position findBestTarget()
     // First to approach or aloof the enemy
     for (auto player : players)
     {   
-        if (self->teamID == player.second.teamID || player.second.isDying) continue;
+        if (self->teamID == player.second.teamID || player.second.hp <= 0 ||player.second.isDying) continue;
         double distance =  distance_table[CordToGrid(player.second.x)][CordToGrid(player.second.y)];
         if (distance < minDistance)
         {
@@ -877,15 +904,14 @@ Position findBestTarget()
                 unColoredDistance = 1;
                 canStepUnColored = false;
             }
-            else if (job == EGG_MAN)
+            else if (job == EGG_MAN || job == MONKEY_DOCTOR)
             {
                 bestTarget = {CordToGrid(player.second.x), CordToGrid(player.second.y)};
-                if (self->bulletNum  == 0) 
+                if (nowBulletNum  != self->maxBulletNum) 
                 {
                     unColoredDistance = 10;
                     canStepUnColored = false;
                 }
-                else if (self->bulletNum == 1) unColoredDistance = 3;
                 else unColoredDistance = 1;
             }
         }
@@ -895,8 +921,8 @@ Position findBestTarget()
     std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
     if (minDistance > 10000 && job == PURPLE_FISH)
-        minDistance = INF_DISTANCE;
-    if (minDistance < INF_DISTANCE)
+        minDistance = MAX_DISTANCE + 1;
+    if (minDistance < MAX_DISTANCE + 1)
         return bestTarget;
 
     // Second to get items
@@ -914,7 +940,7 @@ Position findBestTarget()
     std::cout << "Min Distance 2: " << minDistance << std::endl;
     std::cout << "Best Target 2: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
-    if (minDistance < INF_DISTANCE)
+    if (minDistance < MAX_DISTANCE + 1)
         return bestTarget;
 
     // No item or enemy, set a defualt target 
@@ -924,15 +950,13 @@ Position findBestTarget()
         finalTarget = final_target_list[count];   
 	}
     if (job == PURPLE_FISH) canStepUnColored = false;
-    else if (job == EGG_MAN)
+    else if (job == EGG_MAN || job == MONKEY_DOCTOR)
     {
-        if (self->bulletNum  < 2) 
+        if (nowBulletNum != self->maxBulletNum) 
         {
             unColoredDistance = 10;
             canStepUnColored = false;
         }
-        else if (self->bulletNum == 2) unColoredDistance = 5;
-        else if (self->bulletNum == 3) unColoredDistance = 2;
         else unColoredDistance = 1;
     }
     bestTarget = finalTarget;
@@ -947,7 +971,7 @@ void moveAction()
 {
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
-    std::cout << "???" << std::endl;
+    // std::cout << "???" << std::endl;
     nowTarget = findBestTarget();
     if (nowTarget == nowPosition)
     {
@@ -979,6 +1003,8 @@ void debugInfo()
 	std::cout << "Now Frame " << frame << " Elapse: " << processEnd - processBegin << std::endl;
 	std::cout << "================================" << std::endl;
 	auto self = gameInfo->GetSelfInfo();
+    std::cout << "NowBulletNum: " << nowBulletNum << std::endl;
+    std::cout << "maxBulletNum: " << self->maxBulletNum << std::endl;
     std::cout << "CanStepUnColored: " << canStepUnColored << std::endl;
     std::cout << "Last Action: " << lastAction << std::endl;
     std::cout << "Last Attack Angle: " << lastAttackAngle << std::endl;
@@ -1017,7 +1043,7 @@ void AI::play(GameApi& g)
     processBegin = clock();
     updateInfo(g);
     pickAction();
-    // avoidBullet();
+    avoidBullet();
     attackAction();
     // correctPosition();
     moveAction();
