@@ -583,7 +583,7 @@ void refreshPlayers()
 	auto self = gameInfo->GetSelfInfo();
     for (auto p : new_players)
 	{
-		if (p->guid == self->guid)
+		if (p->teamID == self->teamID)
 			continue;
 		if (players.find(p->guid) != players.end())
 			players.erase(p->guid);
@@ -1028,7 +1028,9 @@ void sendMessage()
 		auto new_players = gameInfo->GetCharacters();
 		for (auto p : new_players)
 		{
-			if (p->guid == self->guid)
+			if (p->teamID == self->teamID)
+				continue;
+			if (p->isDying)
 				continue;
 			strToSend.push_back((char)CordToGrid(p->x));
 			strToSend.push_back((char)CordToGrid(p->y));
@@ -1039,17 +1041,29 @@ void sendMessage()
 
 void recieveMessage()
 {
+	for (auto it = players.begin(); it != players.end();)
+	{
+		if (it->first < 0)
+			players.erase(it++);
+		else
+			it++;
+	}
 	auto self_playerID = getSelfPlayerID();
 	std::string recieveStr;
 	std::cout << "Recieved : " << std::endl;
 	while (gameInfo->TryGetMessage(recieveStr))
 	{
-		std::cout << "\t";
-		for (auto c : recieveStr)
+		int i = 2;
+		for(; i < recieveStr.size();)
 		{
-			std::cout << (int)c << " ";
+			THUAI4::Character c;
+			c.teamID = !gameInfo->GetSelfInfo()->teamID;
+			c.x = GridToCord((int)recieveStr[i]);
+			++i;
+			c.y = GridToCord((int)recieveStr[i]);
+			++i;
+			players.insert(std::make_pair(-i, c));
 		}
-		std::cout << std::endl;
 	}
 }
 
@@ -1089,6 +1103,11 @@ void debugInfo()
     std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][std::min(nowPosition[1] - 1, 49)] << " ";
     std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][nowPosition[1]] << " ";
     std::cout << distance_table[std::min(nowPosition[0] + 1, 49)][std::min(nowPosition[1] + 1, 49)] << " " << std::endl;
+	std::cout << "Players:" << std::endl;
+	for (auto p : players)
+	{
+		std::cout << "\t" << p.first << " : " << p.second.x << " , " << p.second.y << std::endl;
+	}
 	std::cout << "================================" << std::endl;
     std::cout << std::endl;
 }
