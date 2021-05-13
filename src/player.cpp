@@ -71,8 +71,8 @@ enum Job {PURPLE_FISH, EGG_MAN};
 /*                                      */
 /****************************************/
 
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Man
 
 const int ZOOM = 10;
 const int LENGTH = 50;
@@ -1017,7 +1017,7 @@ void AI::play(GameApi& g)
     processBegin = clock();
     updateInfo(g);
     pickAction();
-    // avoidBullet();
+    avoidBullet();
     attackAction();
     // correctPosition();
     moveAction();
