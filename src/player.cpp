@@ -1251,24 +1251,50 @@ void sendMessage()
     if (isAct == true) return;
 	auto self_playerID = getSelfPlayerID();
 	auto self = gameInfo->GetSelfInfo();
+	std::string strToSend;
+	// std::cout << "send : " << std::endl;
+	strToSend.push_back((char)CordToGrid(self->x));
+	strToSend.push_back((char)CordToGrid(self->y));
+	// std::cout << "\t" << CordToGrid(self->x) << " , " << CordToGrid(self->y) << std::endl;
+	int bit_index = 0;
+	char byte = 0;
+	for (int x = std::max(CordToGrid(self->x) - 4, 0); x < std::min(CordToGrid(self->x) + 4, 50); ++x)
+	{
+		// std::cout << "\t";
+		for (int y = std::max(CordToGrid(self->y) - 4, 0); y < std::min(CordToGrid(self->y) + 4, 50); ++y)
+		{
+			// std::cout << (int)colorMap[x][y] << " ";
+			if (colorMap[x][y] == 1)
+				byte |= (char)(1 << bit_index);
+			bit_index++;
+			if (bit_index > 6)
+			{
+				strToSend.push_back(byte);
+				bit_index = 0;
+				byte = 0;
+			}
+		}
+		// std::cout << std::endl;
+	}
+	strToSend.push_back(byte);
+	// for (auto c : strToSend){
+	// 	std::cout << (int)c << " ";
+	// }
+	// std::cout << std::endl;
+	for (auto p : gameInfo->GetCharacters())
+	{
+		if (p->teamID == self->teamID)
+			continue;
+		if (p->isDying)
+			continue;
+		strToSend.push_back((char)CordToGrid(p->x));
+		strToSend.push_back((char)CordToGrid(p->y));
+		strToSend.push_back((char)(p->hp / 100));
+	}
 	for (int i = 0; i < 3; ++i)
 	{
 		if (i == self_playerID)
 			continue;
-		std::string strToSend;
-		strToSend.push_back((char)CordToGrid(self->x));
-		strToSend.push_back((char)CordToGrid(self->y));
-		auto new_players = gameInfo->GetCharacters();
-		for (auto p : new_players)
-		{
-			if (p->teamID == self->teamID)
-				continue;
-			if (p->isDying)
-				continue;
-			strToSend.push_back((char)CordToGrid(p->x));
-			strToSend.push_back((char)CordToGrid(p->y));
-			strToSend.push_back((char)(p->hp / 100));
-		}
 		gameInfo->Send(i, strToSend);
 	}
 }
@@ -1287,9 +1313,32 @@ void recieveMessage()
 	// std::cout << "Recieved : " << std::endl;
 	while (gameInfo->TryGetMessage(recieveStr))
 	{
+		int senderX = recieveStr[0];
+		int senderY = recieveStr[1];
+		// std::cout << "\t" << senderX << " , " << senderY << std::endl;
 		int i = 2;
+		int bit_index = 0;
+		for (int x = std::max(senderX - 4, 0); x < std::min(senderX + 4, 50); ++x)
+		{
+			// std::cout << "\t";
+			for (int y = std::max(senderY - 4, 0); y < std::min(senderY + 4, 50); ++y)
+			{
+				bool bit = (char)recieveStr[i] & (char)(1 << bit_index);
+				// std::cout << bit << " ";
+				colorMap[x][y] == bit ? 1 : -1;
+				bit_index++;
+				if (bit_index > 6)
+				{
+					i++;
+					bit_index = 0;
+				}
+			}
+			// std::cout << std::endl;
+		}
+		i++;
 		for(; i < recieveStr.size();)
 		{
+			// std::cout << "\t";
 			THUAI4::Character c;
 			c.teamID = !gameInfo->GetSelfInfo()->teamID;
 			c.x = GridToCord((int)recieveStr[i]);
@@ -1298,6 +1347,7 @@ void recieveMessage()
 			++i;
 			c.hp = int(recieveStr[i]) * 100;
 			++i;
+			// std::cout << -i << " : " << c.x << " , " << c.y << " " << c.hp << std::endl;;
 			players.insert(std::make_pair(-i, std::make_pair(c, frame)));
 		}
 	}
