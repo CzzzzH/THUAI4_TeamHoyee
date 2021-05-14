@@ -94,7 +94,7 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 /*          Global Variables             */
 /*                                      */
 /****************************************/
-
+Position findBestTarget();
 extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
@@ -813,7 +813,7 @@ std::priority_queue<countPos> getLargeColorMap(int window)
 			printf("tmpC %f %f %d %d \n", tmpC[0], tmpC[1], nowX + i, nowY + j);
 		}
 	}
-	while(count.top().count > 0.7)
+	while(count.top().count > 0.5)
 	{
 		extend += window;
 		for(int i = -extend;i <= extend;i += window)
@@ -826,7 +826,7 @@ std::priority_queue<countPos> getLargeColorMap(int window)
 			std::array<double, 2> tmpC = countColor(window, nowX + extend, nowY + j);
 			count.push({tmpC[0], tmpC[1],  nowX + extend, nowY + j});
 		}
-		if(extend >= 8 * window)
+		if(extend >= 10 * window)
 		{
 			// count.push({});
 			break;
@@ -879,7 +879,8 @@ void attackAction()
 		else if (job == HAPPY_MAN && nowBulletNum > 1)
 		{
 			nowBulletNum = self->bulletNum;
-			while (nowBulletNum > 3)
+			Position tmpTarget = findBestTarget();
+			while (nowBulletNum > 5)
 			{
 				nowBulletNum--;
 				std::priority_queue<countPos> tmp = getLargeColorMap(3);
@@ -891,7 +892,7 @@ void attackAction()
 				double distance = getPointToPointDistance(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
 				int attackTime = int(distance / 12. + 0.5);
 				// printf("selfx %d, selfy %d \n", self->x/1000, self->y/1000);
-				// printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
+				printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
 				// printf("%d, %d aT: %d, angle : %f\n", dx, dy, attackTime, angle);
 				gameInfo->Attack(attackTime, angle);
 				tmp.pop();
