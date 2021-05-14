@@ -97,8 +97,8 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 
 
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Mandoctor
 
 const int ZOOM = 10;
@@ -703,11 +703,50 @@ void pickAction()
     }
 }
 
+void virtualColorMap(double angleR)
+{
+	for (auto distance = 1000; distance < 100000; distance += 100)
+    {
+        // auto angleR = angleToRadian(bestAngle);
+        auto targetX = CordToGrid(gameInfo->GetSelfInfo()->x + cos(angleR) * distance);
+        auto targetY = CordToGrid(gameInfo->GetSelfInfo()->y + sin(angleR) * distance);
+        if (targetX < 0 || targetX > 49 || targetY < 0 || targetY > 49) break;
+        if (lastX == targetX && lastY == targetY) continue;
+        lastX = targetX;
+        lastY = targetY;
+        int block = defaultMap[targetX][targetY];
+        // for (int i = std::max(0, targetX - 1); i <= std::min(49, targetX + 1); ++i)
+        //     for (int j = std::max(0, targetY - 1); j <= std::min(49, targetY + 1); ++j)
+        //         block += defaultMap[i][j];
+        if (block > 0) break;
+        colorMap[targetX][targetY] = 1;
+    }
+}
+
+Position findBestTarget();
 double getBestExtendAngle()
 {
     auto self = gameInfo->GetSelfInfo();
     int bestValue = 0;
     int bestAngle = 0;
+	{
+		nowTarget = findBestTarget();
+		auto l = searchWayFromMap(nowPosition, nowTarget);
+		if (l.front() != DONT_MOVE)
+		{
+			double angleR = M_PI / 4 * l.front();
+			for (int distance = 0; distance < 2000; distance += 500)
+			{
+				auto targetX = CordToGrid(self->x + cos(angleR) * distance);
+            	auto targetY = CordToGrid(self->y + sin(angleR) * distance);
+				if (colorMap[targetX][targetY] != 1)
+				{
+					virtualColorMap(angleR);
+					return angleR;
+				}
+			}
+		}
+	}
     for (auto angle = rand() % 10; angle < 360; angle += 10)
     {
         if (std::abs(lastAttackAngle - angle) < 30) continue;
@@ -750,22 +789,7 @@ double getBestExtendAngle()
     auto lastX = nowPosition[0];
     auto lastY = nowPosition[1];
     // std::cout << "Updated extend value: " << std::endl;
-    for (auto distance = 1000; distance < 100000; distance ++)
-    {
-        auto angleR = angleToRadian(bestAngle);
-        auto targetX = CordToGrid(self->x + cos(angleR) * distance);
-        auto targetY = CordToGrid(self->y + sin(angleR) * distance);
-        if (targetX < 0 || targetX > 49 || targetY < 0 || targetY > 49) break;
-        if (lastX == targetX && lastY == targetY) continue;
-        lastX = targetX;
-        lastY = targetY;
-        int block = defaultMap[targetX][targetY];
-        // for (int i = std::max(0, targetX - 1); i <= std::min(49, targetX + 1); ++i)
-        //     for (int j = std::max(0, targetY - 1); j <= std::min(49, targetY + 1); ++j)
-        //         block += defaultMap[i][j];
-        if (block > 0) break;
-        colorMap[targetX][targetY] = 1;
-    }
+	virtualColorMap(angleToRadian(bestAngle));
     // std::cout << std::endl;
     // std::cout << "Best Value: " << bestValue << " Best Angle: " << bestAngle << std::endl; 
     lastAttackAngle = bestAngle;
@@ -1228,7 +1252,7 @@ void recieveMessage()
 	}
 	auto self_playerID = getSelfPlayerID();
 	std::string recieveStr;
-	std::cout << "Recieved : " << std::endl;
+	// std::cout << "Recieved : " << std::endl;
 	while (gameInfo->TryGetMessage(recieveStr))
 	{
 		int i = 2;
