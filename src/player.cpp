@@ -112,6 +112,7 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 /*          Global Variables             */
 /*                                      */
 /****************************************/
+
 Position findBestTarget();
 extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
@@ -199,9 +200,10 @@ static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int frame = 0, tiredFrame = 0;
-static int nowBulletNum = 0, priorAttackTime = 0;
+static int nowBulletNum = 0, lastBulletNum = 0, priorAttackTime = 0;
 static int lastX, lastY, lastAttackAngle;
 static bool isAct, getItem;
+static double bulletRecoverTime = 0;
 static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
@@ -549,16 +551,20 @@ void initialization(GameApi& g)
     final_target_list_choice =
     {
         // Route 0 for Monkey Doctor 
-        {{6, 6}, {16, 6}, {22, 13}, {23, 25}, {24, 31}, {24, 44}, {8, 44}, {8, 34}, {8, 20}}, 
+        {{5, 5}, {16, 6}, {22, 13}, {23, 25}, {24, 31}, {24, 44}, {5, 45}, {8, 34}, {8, 20}}, 
         // Route 1 for Monkey Doctor 
-        {{30, 6}, {42, 6}, {44, 18}, {42, 32}, {44, 44}, {27, 44}, {27, 25}},
+        {{30, 6}, {45, 5}, {44, 18}, {42, 32}, {45, 45}, {27, 44}, {27, 25}},
         // Route 2 for Purple Fish
-        {{16, 17}, {26, 15}, {25, 25}, {35, 23}, {32, 30}, {25, 25}},
-		//Route 3 - 6 for Happy Man
-		{{25, 14}, {30, 11}, {33, 6}, {40, 6}, {43, 13}, {38, 20}},
-        {{26, 27}, {35, 27}, {44, 36}, {42, 46}, {30, 44}},
-		{{15, 6}, {22, 13}, {23, 24}, {16, 22}, {11, 16}, {5, 20}, {5, 6}},
-		{{5, 28}, {14, 28}, {27, 34}, {21, 44}, {8, 44}}
+        {{10, 17}, {23, 15}, {35, 11}, {32, 30}, {31, 44}, {19, 43}, {21, 33}, {25, 25}, 
+         {16, 26}, {11, 36}, {5, 22}},
+        // Route 3 for Purple Fish
+        {{32, 30}, {31, 44}, {19, 43}, {21, 33}, {25, 25}, 
+         {16, 26}, {11, 36}, {5, 22}, {10, 17}, {23, 15}, {35, 11}, },
+		//Route 4 - 7 for Happy Man
+		{{25, 13}, {31, 10}, {36, 5}, {40, 6}, {44, 13}, {46, 23}, {39, 30}, {35, 23}, {24, 23}},
+        {{25, 24}, {30, 31}, {41, 35}, {37, 47}, {31, 47}, {21, 44}, {18, 37}, {24, 34}, {30, 38}, {33, 32}, {25, 30}},
+		{{23, 15}, {15, 6}, {5, 5}, {3, 11}, {3, 20}, {4, 28}, {11, 31}, {17, 25}, {9, 17}, {20, 18}},
+		{{29, 29}, {31, 40}, {18, 43}, {17, 47}, {6, 44}, {3, 33}, {19, 36}, {21, 31}, {26, 26}}
     };
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
@@ -569,24 +575,24 @@ void initialization(GameApi& g)
     }
     else if (job == PURPLE_FISH) 
 	{
-		if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
-		else final_target_list = final_target_list_choice[1];
+		if (nowPosition[0] < 25) final_target_list = final_target_list_choice[2];
+		else final_target_list = final_target_list_choice[3];
 	}
 	else if (job == HAPPY_MAN)
 	{
 		if (nowPosition[1] < 25)
 		{
 			if (nowPosition[0] > 25)
-				final_target_list = final_target_list_choice[5];
+				final_target_list = final_target_list_choice[6];
 			else
-				final_target_list = final_target_list_choice[3];
+				final_target_list = final_target_list_choice[4];
 		}
 		else
 		{
 			if (nowPosition[0] > 25)
-				final_target_list = final_target_list_choice[6];
+				final_target_list = final_target_list_choice[7];
 			else
-				final_target_list = final_target_list_choice[4];
+				final_target_list = final_target_list_choice[5];
 		}
 	}
 	finalTarget = final_target_list[0];
@@ -672,6 +678,9 @@ void updateInfo(GameApi& g)
     unColoredDistance = 10;
     nowPosition = {CordToGrid(self->x), CordToGrid(self->y)};
     nowBulletNum = self->bulletNum;
+    if (nowBulletNum > lastBulletNum) bulletRecoverTime = 0;
+    else if (colorMap[nowPosition[0]][nowPosition[1]] != 1) bulletRecoverTime = 0;
+    else bulletRecoverTime += 50;
     refreshColorMap();
 	refreshPlayers();
 	refreshProps();
@@ -696,6 +705,7 @@ void updateEnd()
     lastX = self->x;
     lastY = self->y;
     lastPosition = nowPosition;
+    lastBulletNum = self->bulletNum;
 }
 
 void pickAction()
@@ -1174,39 +1184,83 @@ Position findBestTarget()
         double distance =  distance_table[CordToGrid(player.second.first.x)][CordToGrid(player.second.first.y)];
         if (distance < minDistance)
         {
-            minDistance = distance;
             targetAngleR = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
             if (job == PURPLE_FISH) 
             {
-                unColoredDistance = 1;
-                switchFinalTarget(targetAngleR, count);
+                if (distance < 10000) switchFinalTarget(targetAngleR, count);
+                if (distance < 6000)
+                {
+                    minDistance = distance;
+                    unColoredDistance = 1;
+                }
             }
-            else if (job == EGG_MAN || job == MONKEY_DOCTOR  || job == HAPPY_MAN)
+            else if (job == EGG_MAN || job == MONKEY_DOCTOR)
             {
                 bestTarget = {CordToGrid(player.second.first.x), CordToGrid(player.second.first.y)};
-                if (nowBulletNum != self->maxBulletNum) 
+                minDistance = distance;
+                unColoredDistance = 2;
+                if (self->bulletNum == 0 || (self->CD) > 0.3) canStepUnColored = false;
+            }
+            else if (job == HAPPY_MAN)
+            {
+                bestTarget = {CordToGrid(player.second.first.x), CordToGrid(player.second.first.y)};
+                if (player.second.first.jobType == THUAI4::JobType::MonkeyDoctor && distance < 10000)
                 {
-                    unColoredDistance = 10;
-                    canStepUnColored = false;
+                    unColoredDistance = 1;
+                    if (player.second.first.ap * player.second.first.bulletNum >= self->hp)
+                        switchFinalTarget(targetAngleR, count);
                 }
-                else unColoredDistance = 1;
+                else if (player.second.first.jobType == THUAI4::JobType::PurpleFish && 
+                    bulletRecoverTime / double(self->CD) < 0.5)
+                {
+                    minDistance = distance;
+                    unColoredDistance = 1;
+                }
+                else
+                {
+                    minDistance = distance;
+                    unColoredDistance = 10;
+                    if (double(self->CD) > 0.5 && nowBulletNum != self->maxBulletNum) 
+                        canStepUnColored = false;
+                }
             }
         }
     }
 
-    if (directDistance > 4998 && (job == PURPLE_FISH))
-        minDistance = MAX_DISTANCE + 1;
-    if (nowBulletNum == 0 && (job == MONKEY_DOCTOR || job == HAPPY_MAN) && colorMap[nowPosition[0]][nowPosition[1]] != 1)
-        minDistance = MAX_DISTANCE + 1;
+    if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        canStepUnColored = true;
+    if (minDistance < MAX_DISTANCE + 1 && minDistance < 10000)
+        return bestTarget;
+    else minDistance = MAX_DISTANCE + 1;
 
-    // Second to aloof the teammate
+    // Second to get items
+    for (auto prop : props)
+	{
+		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
+		if (distance < minDistance)
+		{
+			minDistance = distance;
+            targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
+			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
+            unColoredDistance = 2;
+            if (bulletRecoverTime / double(self->CD) > 0.3 && nowBulletNum != self->maxBulletNum) 
+                canStepUnColored = false;
+		}
+	}
+
+    if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        canStepUnColored = true;
+    if (minDistance < MAX_DISTANCE + 1)
+        return bestTarget;
+    else minDistance = MAX_DISTANCE + 1;
+
+    // Third to aloof the teammate
     for (auto player : players)
     {   
         if (self->teamID != player.second.first.teamID || player.second.first.hp <= 0 ||player.second.first.isDying) continue;
         double distance =  distance_table[CordToGrid(player.second.first.x)][CordToGrid(player.second.first.y)];
-        if (distance < minDistance)
+        if (distance < minDistance && distance < 2000)
         {
-            minDistance = distance;
             targetAngleR = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
             switchFinalTarget(targetAngleR, count);
             if (nowBulletNum != self->maxBulletNum) 
@@ -1218,27 +1272,8 @@ Position findBestTarget()
         }
     }
 
-    if (nowBulletNum == 0 && (job == MONKEY_DOCTOR || job == HAPPY_MAN) && colorMap[nowPosition[0]][nowPosition[1]] != 1)
-        minDistance = MAX_DISTANCE + 1;
-
-    // Third to get items
-    for (auto prop : props)
-	{
-		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
-		if (distance < minDistance)
-		{
-			minDistance = distance;
-            targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
-			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
-            if (nowBulletNum != self->maxBulletNum)
-			{ 
-				canStepUnColored = false;
-				unColoredDistance = 10;
-			}
-		}
-	}
-    
-
+    if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        canStepUnColored = true;
     if (minDistance < MAX_DISTANCE + 1)
         return bestTarget;
 
@@ -1250,18 +1285,52 @@ Position findBestTarget()
 	}
     if (job == PURPLE_FISH)
     {
-        canStepUnColored = false;
         unColoredDistance = 10;
+        if (bulletRecoverTime / double(self->CD) > 0.1 && nowBulletNum != self->maxBulletNum) 
+            canStepUnColored = false;
     }
-    else if (job == EGG_MAN || job == MONKEY_DOCTOR || job == HAPPY_MAN)
+    else if (job == EGG_MAN || job == MONKEY_DOCTOR)
     {
-        if (nowBulletNum != self->maxBulletNum) 
+        if (nowBulletNum == self->maxBulletNum)
+            unColoredDistance = 1;
+        else if (nowBulletNum == self->maxBulletNum - 1) 
+        {
+            unColoredDistance = 2;
+            if (bulletRecoverTime / double(self->CD) > 0.2)
+                canStepUnColored = false;
+        }
+        else
         {
             unColoredDistance = 10;
             canStepUnColored = false;
         }
-        else unColoredDistance = 1;
     }
+    else if (job == HAPPY_MAN)
+    {
+        if (nowBulletNum > 6)
+        {
+            if (nowBulletNum == self->maxBulletNum)
+                unColoredDistance = 1;
+            else unColoredDistance = 2;
+            if (bulletRecoverTime / double(self->CD) > 0.5)
+                canStepUnColored = false;
+        }
+        else if (nowBulletNum > 3) 
+        {
+            unColoredDistance = 5;
+            if (bulletRecoverTime / double(self->CD) > 0.3)
+                canStepUnColored = false;
+        }
+        else
+        {
+            unColoredDistance = 10;
+            if (bulletRecoverTime / double(self->CD) > 0.1)
+                canStepUnColored = false;
+        }
+    }
+
+    if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        canStepUnColored = true;
     bestTarget = finalTarget;
 
     // std::cout << "Min Distance 3: " << minDistance << std::endl;
