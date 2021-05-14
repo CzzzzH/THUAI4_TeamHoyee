@@ -1144,6 +1144,8 @@ void moveAction()
     auto l = searchWayFromMap(nowPosition, nowTarget);
     if ((job == PURPLE_FISH || job == HAPPY_MAN) && tiredFrame > 20 && nowBulletNum > 0)
         gameInfo->Attack(0, getPointToPointAngle(self->x, self->y, GridToCord(nowPosition[0]), GridToCord(nowPosition[1]))); 
+    if (job == HAPPY_MAN && tiredFrame > 40 && nowBulletNum > 0)
+        gameInfo->Attack(100, getPointToPointAngle(self->x, self->y, GridToCord(nowPosition[0]), GridToCord(nowPosition[1]))); 
     if (*l.begin() == DONT_MOVE)
     {
         lastAction = WAIT;
@@ -1286,8 +1288,8 @@ void AI::play(GameApi& g)
     updateInfo(g);
     attackAction();
     pickAction();
-    // sendMessage();
-	// recieveMessage();
+    sendMessage();
+	recieveMessage();
     avoidBullet();
     moveAction();
     updateEnd();
