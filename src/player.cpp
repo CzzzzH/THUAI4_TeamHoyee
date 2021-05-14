@@ -140,7 +140,8 @@ static int unColoredDistance = 10;
 const static double MAX_DISTANCE = 9999999999;
 unsigned char dynamicMap[LENGTH][LENGTH];
 
-std::unordered_map<int64_t, THUAI4::Character> players;
+std::unordered_map<int64_t, std::pair<THUAI4::Character, uint32_t>> players;
+
 std::unordered_map<int64_t, THUAI4::Prop> props;
 
 static GameApi* gameInfo;
@@ -574,7 +575,8 @@ void refreshPlayers()
 	for (auto p = players.begin(); p != players.end();)
 	{
 		auto self = gameInfo->GetSelfInfo();
-		if (getPointToPointDistance(p->second.x, p->second.y, self->x, self->y)  < 5000)
+		if (getPointToPointDistance(p->second.first.x, p->second.first.y, self->x, self->y)  < 5000 ||
+			p->second.second < frame - 20)
 			players.erase(p++);
         else
             p++;
@@ -587,7 +589,7 @@ void refreshPlayers()
 			continue;
 		if (players.find(p->guid) != players.end())
 			players.erase(p->guid);
-		players.insert(std::make_pair(p->guid, THUAI4::Character(*p)));
+		players.insert(std::make_pair(p->guid, std::make_pair(THUAI4::Character(*p), frame)));
 	}
 }
 
@@ -746,15 +748,15 @@ double attackEnemyAngle()
 	auto self = gameInfo->GetSelfInfo();
     for (auto player: players)
     {
-        std::cout << "Player: " << player.second.guid << " " << player.second.x << " " << player.second.y;
-        if (self->teamID == player.second.teamID || player.second.hp <= 0 || player.second.isDying) continue;
-        double distance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
+        std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y;
+        if (self->teamID == player.second.first.teamID || player.second.first.hp <= 0 || player.second.first.isDying) continue;
+        double distance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
         if (distance < minDistance)
         {
             minDistance = distance;
             attackTime = int(minDistance / 18. + 0.5);
-            attackHp = player.second.hp;
-            res = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
+            attackHp = player.second.first.hp;
+            res = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
         }
 	}
     // std::cout << "Attack Angle: " << res << std::endl;
@@ -877,13 +879,13 @@ Position findBestTarget()
     // First to approach or aloof the enemy
     for (auto player : players)
     {   
-        if (self->teamID == player.second.teamID || player.second.hp <= 0 ||player.second.isDying) continue;
-        double distance =  distance_table[CordToGrid(player.second.x)][CordToGrid(player.second.y)];
+        if (self->teamID == player.second.first.teamID || player.second.first.hp <= 0 ||player.second.first.isDying) continue;
+        double distance =  distance_table[CordToGrid(player.second.first.x)][CordToGrid(player.second.first.y)];
         if (distance < minDistance)
         {
             minDistance = distance;
-            directDistance = getPointToPointDistance(self->x, self->y, player.second.x, player.second.y);
-            targetAngleR = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
+            directDistance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
+            targetAngleR = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
             if (job == PURPLE_FISH)
             {
                 targetAngleR -= M_PI;
@@ -895,7 +897,7 @@ Position findBestTarget()
             }
             else if (job == EGG_MAN || job == MONKEY_DOCTOR)
             {
-                bestTarget = {CordToGrid(player.second.x), CordToGrid(player.second.y)};
+                bestTarget = {CordToGrid(player.second.first.x), CordToGrid(player.second.first.y)};
                 if (nowBulletNum != self->maxBulletNum) 
                 {
                     unColoredDistance = 10;
@@ -1088,7 +1090,7 @@ void recieveMessage()
 			++i;
 			c.hp = int(recieveStr[i]) * 100;
 			++i;
-			players.insert(std::make_pair(-i, c));
+			players.insert(std::make_pair(-i, std::make_pair(c, frame)));
 		}
 	}
 }
@@ -1134,7 +1136,7 @@ void debugInfo()
 	std::cout << "Players:" << std::endl;
 	for (auto p : players)
 	{
-		std::cout << "\t" << p.first << " : " << p.second.x << " , " << p.second.y << "hp: " << p.second.hp << std::endl;
+		std::cout << "\t" << p.first << " : " << p.second.first.x << " , " << p.second.first.y << "hp: " << p.second.first.hp << std::endl;
 	}
 	std::cout << "================================" << std::endl;
     std::cout << std::endl;
