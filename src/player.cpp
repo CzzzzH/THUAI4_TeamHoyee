@@ -97,6 +97,12 @@ struct countPos
 	}
 };
 
+struct timeAng
+{
+	int time;
+	int ang;
+};
+
 enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
 enum Action {MOVE, ATTACK, PRIOR_ATTACK, PICK, USE, WAIT};
 enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
@@ -960,6 +966,7 @@ void attackAction()
 				printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
 				// printf("%d, %d aT: %d, angle : %f\n", dx, dy, attackTime, angle);
 				gameInfo->Attack(attackTime, angle);
+
 				tmp.pop();
 			}
 		}
