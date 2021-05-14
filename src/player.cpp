@@ -531,67 +531,41 @@ void initialization(GameApi& g)
 
     final_target_list_choice =
     {
-        // Route 0 for Purple Fish(LeftUpper Corner)
-        {{6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}, {44, 16}, 
-            {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44}, {20, 44}, 
-            {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14}},
-        // Route 1 for Purple fish(LeftUpper Corner)
-        {{6, 14}, {6, 24}, {6, 34}, {6, 44}, {9, 44}, {20, 44}, 
-            {30, 44}, {41, 44}, {44, 44}, {44, 35}, {44, 26}, {44, 16}, 
-            {44, 6}, {34, 6}, {25, 15}, {16, 6}, {6, 6}},
-        // Route 2 for Purple fish(LeftBottom Corner)
-        {{44, 6}, {34, 6}, {25, 15}, {16, 6}, {6, 6},
-            {6, 14}, {6, 24}, {6, 34}, {6, 44}, {9, 44}, {20, 44}, 
-            {30, 44}, {41, 44}, {44, 44}, {44, 35}, {44, 26}, {44, 16}},
-        // Route 3 for Purple Fish(LeftBottom Corner)
-        {{44, 16}, {44, 26}, {44, 35}, {44, 44}, {41, 44}, {30, 44},
-            {20, 44}, {9, 44}, {6, 44}, {6, 34}, {6, 24}, {6, 14},
-            {6, 6}, {16, 6}, {25, 15}, {34, 6}, {44, 6}},
-        // Route 4 for Purple Fish
-        {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}},
-        // Route 5 for Monkey Docter & Egg Man
-        {{25, 25}},
-		//Route 6 - 9, 
-		{{29, 13}, {35, 10}, {37, 22}},
+        // Route 0 for Monkey Doctor 
+        {{12, 12}, {16, 31}, {20, 12}}, 
+        // Route 1 for Monkey Doctor 
+        {{39, 9}, {44, 18}, {38, 28}, {40, 39}},
+        // Route 2 for Purple Fish
+        {{16, 17}, {26, 15}, {25, 25}, {35, 23}, {32, 30}, {25, 25}},
+		//Route 3 - 6 for Happy Man
+		{{29, 13}, {35, 10}, {37, 22}}, 
         {{39, 33}, {32, 40}},
 		{{14, 6}, {21, 12}, {13, 19}},
 		{{10, 38}, {14, 32}, {19, 41}}
     };
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
-    if (job == MONKEY_DOCTOR || job == EGG_MAN)  final_target_list = final_target_list_choice[5];
-    else if (job == PURPLE_FISH || job == HAPPY_MAN)
+    if (job == MONKEY_DOCTOR || job == EGG_MAN)
     {
-        if (nowPosition[1] < 25)
-        {
-            if (nowPosition[0] < 25)
-            {
-                if (nowPosition[1] == 2) final_target_list = final_target_list_choice[0];
-                if (nowPosition[1] == 3) final_target_list = final_target_list_choice[1];
-            }
-            if (nowPosition[0] > 25)
-            {
-                if (nowPosition[1] == 2) final_target_list = final_target_list_choice[2];
-                if (nowPosition[1] == 3) final_target_list = final_target_list_choice[3];
-            } 
-        }
-        if (nowPosition[1] > 25) final_target_list = final_target_list_choice[4];
+        if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
+        else final_target_list = final_target_list_choice[1];
     }
-	else if (playerJob == THUAI4::JobType::HappyMan)
+    else if (job == PURPLE_FISH) final_target_list = final_target_list_choice[2];
+	else if (job == HAPPY_MAN)
 	{
 		if (nowPosition[1] < 25)
 		{
 			if (nowPosition[0] > 25)
-				final_target_list = final_target_list_choice[6];
+				final_target_list = final_target_list_choice[5];
 			else
-				final_target_list = final_target_list_choice[8];
+				final_target_list = final_target_list_choice[3];
 		}
 		else
 		{
 			if (nowPosition[0] > 25)
-				final_target_list = final_target_list_choice[7];
+				final_target_list = final_target_list_choice[6];
 			else
-				final_target_list = final_target_list_choice[9];
+				final_target_list = final_target_list_choice[4];
 		}
 	}
 	finalTarget = final_target_list[0];
@@ -850,7 +824,7 @@ void attackAction()
 
     for (auto player: players)
     {
-        std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y << std::endl;
+        // std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y << std::endl;
         if (self->teamID == player.second.first.teamID || player.second.first.hp <= 0 || player.second.first.isDying) continue;
         double distance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
         if (distance < minDistance && frame > nextAttackFrame[player.second.first.guid])
@@ -898,6 +872,7 @@ void attackAction()
 				gameInfo->Attack(attackTime, angle);
 				tmp.pop();
 			}
+            return;
 		}
         else return;
     }
@@ -940,13 +915,13 @@ void priorAttack(GameApi& g)
                 gameInfo->Attack(120, angleR);
                 gameInfo->Attack(120, angleR);
                 priorAttackTime = 2;
-                std::cout << "Prior Attack x2!" << std::endl;
+                // std::cout << "Prior Attack x2!" << std::endl;
             }
             else if (self->bulletNum == 1)
             {
                 gameInfo->Attack(120, angleR);
                 priorAttackTime = 1;
-                std::cout << "Prior Attack x1!" << std::endl;
+                // std::cout << "Prior Attack x1!" << std::endl;
             }
             lastAction = PRIOR_ATTACK;
             break;
@@ -1025,12 +1000,38 @@ void avoidBullet()
 
 }
 
+void switchFinalTarget(double targetAngleR, int &count)
+{
+    targetAngleR -= M_PI;
+    if (targetAngleR < 0) targetAngleR += 2 * M_PI;
+
+    auto countBegin = count;
+    auto self = gameInfo->GetSelfInfo();
+    double minAngleOffset = M_PI;
+    int bestCount = count;
+    for (int i = 0; i < final_target_list.size(); ++i)
+    {
+        auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
+        auto angleOffset = fabs(tempTargetAngleR - targetAngleR); 
+        if (angleOffset > M_PI) angleOffset = 2 * M_PI - angleOffset;
+        // std::cout << count << " " << angleOffset << std::endl;
+        if (angleOffset < minAngleOffset)
+        {
+            minAngleOffset = angleOffset;
+            bestCount = count;
+        }
+        count = (count + 1) % final_target_list.size();
+    }
+    count = bestCount;
+    finalTarget = final_target_list[count];   
+}
+
 Position findBestTarget()
 {
     double minDistance = MAX_DISTANCE + 1;
     double directDistance = 0;
     double targetAngleR = 0;
-    Position bestTarget = {24, 24};
+    Position bestTarget = {-1, -1};
     auto self = gameInfo->GetSelfInfo();
 	static int count = 0;
 
@@ -1042,16 +1043,11 @@ Position findBestTarget()
         if (distance < minDistance)
         {
             minDistance = distance;
-            directDistance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
             targetAngleR = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
-            if (job == PURPLE_FISH)
+            if (job == PURPLE_FISH) 
             {
-                targetAngleR -= M_PI;
-                if (targetAngleR < 0) targetAngleR += 2 * M_PI;
-                int tempTargetX = CordToGrid(self->x + cos(targetAngleR) * 5000);
-                int tempTargetY = CordToGrid(self->y + sin(targetAngleR) * 5000);
-                bestTarget = {std::max(0, std::min(49, tempTargetX)), std::max(0, std::min(49, tempTargetY))};
                 unColoredDistance = 1;
+                switchFinalTarget(targetAngleR, count);
             }
             else if (job == EGG_MAN || job == MONKEY_DOCTOR  || job == HAPPY_MAN)
             {
@@ -1066,51 +1062,43 @@ Position findBestTarget()
         }
     }
 
-    // std::cout << "Min Distance 1: " << minDistance << std::endl;
-    // std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
-
     if (directDistance > 4998 && (job == PURPLE_FISH))
         minDistance = MAX_DISTANCE + 1;
     if (nowBulletNum == 0 && (job == MONKEY_DOCTOR || job == HAPPY_MAN) && colorMap[nowPosition[0]][nowPosition[1]] != 1)
         minDistance = MAX_DISTANCE + 1;
 
-    if (minDistance < MAX_DISTANCE + 1)
-    {
-        if (job == PURPLE_FISH)
+    // Second to aloof the teammate
+    for (auto player : players)
+    {   
+        if (self->teamID != player.second.first.teamID || player.second.first.hp <= 0 ||player.second.first.isDying) continue;
+        double distance =  distance_table[CordToGrid(player.second.first.x)][CordToGrid(player.second.first.y)];
+        if (distance < minDistance)
         {
-            auto countBegin = count;
-            double minAngleOffset = M_PI;
-            int bestCount = count;
-            for (int i = 0; i < final_target_list.size(); ++i)
+            minDistance = distance;
+            targetAngleR = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
+            switchFinalTarget(targetAngleR, count);
+            if (nowBulletNum != self->maxBulletNum) 
             {
-                auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
-                auto angleOffset = fabs(tempTargetAngleR - targetAngleR); 
-                if (angleOffset > M_PI) angleOffset = 2 * M_PI - angleOffset;
-                // std::cout << count << " " << angleOffset << std::endl;
-                if (angleOffset < minAngleOffset)
-                {
-                    minAngleOffset = angleOffset;
-                    bestCount = count;
-                }
-                count = (count + 1) % final_target_list.size();
+                unColoredDistance = 10;
+                canStepUnColored = false;
             }
-            count = bestCount;
-            finalTarget = final_target_list[count];   
+            else unColoredDistance = 1;
         }
-        return bestTarget;
     }
 
-    // Second to get items
+    if (nowBulletNum == 0 && (job == MONKEY_DOCTOR || job == HAPPY_MAN) && colorMap[nowPosition[0]][nowPosition[1]] != 1)
+        minDistance = MAX_DISTANCE + 1;
+
+    // Third to get items
     for (auto prop : props)
 	{
 		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
 		if (distance < minDistance)
 		{
-			// std::cout << "Prop at: " << i << " " << j << std::endl;
 			minDistance = distance;
             targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
 			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
-            if ((job == PURPLE_FISH) && nowBulletNum < 1 || job == HAPPY_MAN)
+            if (nowBulletNum != self->maxBulletNum)
 			{ 
 				canStepUnColored = false;
 				unColoredDistance = 10;
@@ -1118,14 +1106,12 @@ Position findBestTarget()
 		}
 	}
     
-    // std::cout << "Min Distance 2: " << minDistance << std::endl;
-    // std::cout << "Best Target 2: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
     if (minDistance < MAX_DISTANCE + 1)
         return bestTarget;
 
     // No item or enemy, set a defualt target 
-    if (getGridDistance(nowPosition, finalTarget) <= 5)
+    if (getGridDistance(nowPosition, finalTarget) <= 3)
 	{
 		count = (count + 1) % final_target_list.size();
         finalTarget = final_target_list[count];   
@@ -1318,5 +1304,5 @@ void AI::play(GameApi& g)
     moveAction();
     updateEnd();
     processEnd = clock();
-    debugInfo();
+    // debugInfo();
 }
