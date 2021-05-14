@@ -60,10 +60,34 @@ struct bulletCache
     	return moveSpeed < a.moveSpeed;
 	}
 };
+struct countPos
+{
+	double count;
+	double countWall;
+	int nowX;
+	int nowY;
+	countPos(double count, double countWall, int nowX, int nowY) : 
+	count(count), countWall(countWall), nowX(nowX), nowY(nowY){}
+	bool operator<(const countPos& n) const
+	{
+		if(count > n.count)
+		{
+			return true;
+		}
+		else if(count == n.count)
+		{
+			return countWall > n.countWall;
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
 
 enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
 enum Action {MOVE, ATTACK, PRIOR_ATTACK, PICK, USE, WAIT};
-enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR};
+enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 
 /****************************************/
 /*                                      */
@@ -71,7 +95,9 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR};
 /*                                      */
 /****************************************/
 
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
+
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Mandoctor
 
@@ -499,6 +525,7 @@ void initialization(GameApi& g)
     auto self = g.GetSelfInfo();
     
     if (playerJob == THUAI4::JobType::Job3) job = PURPLE_FISH;
+	else if (playerJob == THUAI4::JobType::Job1) job = HAPPY_MAN;
     else if (playerJob == THUAI4::JobType::Job4) job = MONKEY_DOCTOR;
     else if (playerJob == THUAI4::JobType::Job5) job = EGG_MAN;
 
@@ -533,7 +560,7 @@ void initialization(GameApi& g)
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
     if (job == MONKEY_DOCTOR || job == EGG_MAN)  final_target_list = final_target_list_choice[5];
-    else if (job == PURPLE_FISH)
+    else if (job == PURPLE_FISH || job == HAPPY_MAN)
     {
         if (nowPosition[1] < 25)
         {
@@ -585,7 +612,9 @@ void refreshColorMap()
 				colorMap[i][j] = 0;
 			}
 			else if (gameInfo->GetCellColor(i, j) == gameInfo->GetSelfTeamColor())
+			{
                 colorMap[i][j] = 1;
+			}
 			else
                 colorMap[i][j] = -1;				
 		}
@@ -765,6 +794,52 @@ double getBestExtendAngle()
     return angleToRadian(bestAngle);
 }
 
+std::array<double, 2> countColor(int window, int nowX, int nowY)
+{
+	double count = 0;
+	double countWall = 0;
+	double valid = 0;
+	int extend = (window - 1) / 2;
+	for (int k1 = -extend; k1 <= extend; k1++)
+	{
+		for (int k2 = -extend; k2 <= extend; k2++)
+		{
+			if ((nowX + k1 >= 0) && (nowX + k1 <= 49) && (nowY + k2 >= 0) && (nowY + k2 <= 49))
+			{
+				valid = valid + 1;
+				if (defaultMap[nowX + k1][nowY + k2] > 0)
+				{
+					countWall += 1;
+				}
+				else
+					count += colorMap[nowX + k1][nowY + k2];
+			}
+		}
+	}
+	count /= valid;
+	countWall /= valid;
+	return {count, countWall};
+}
+
+std::priority_queue<countPos> getLargeColorMap(int window)
+{
+	auto self = gameInfo->GetSelfInfo();
+	uint32_t nowX = self->x / 1000;
+	uint32_t nowY = self->y / 1000;
+	std::priority_queue<countPos> count;
+	int extend = window;
+	for (int i = -extend; i <= extend; i += extend)
+	{
+		for (int j = -extend; j <= extend; j += extend)
+		{
+			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + j);
+			count.push({tmpC[0], tmpC[1], nowX + i, nowY + j});
+			printf("tmpC %f %f %d %d \n", tmpC[0], tmpC[1], nowX + i, nowY + j);
+		}
+	}
+	return count;
+}
+
 void attackAction()
 {
     if (isAct == true) return;
@@ -802,6 +877,27 @@ void attackAction()
     if (angle < 0)
     {
         if (job == PURPLE_FISH && nowBulletNum > 1) angle = getBestExtendAngle();
+		else if (job == HAPPY_MAN && nowBulletNum > 1)
+		{
+			nowBulletNum = self->bulletNum;
+			while (nowBulletNum > 1)
+			{
+				nowBulletNum--;
+				std::priority_queue<countPos> tmp = getLargeColorMap(3);
+				countPos nowBul = tmp.top();
+				for (int i = std::max(0, nowBul.nowX) - 1; i <= std::min(49, nowBul.nowX) + 1; ++i)
+					for (int j = std::max(0, nowBul.nowY) - 1; j <= std::min(49, nowBul.nowY) + 1; ++j)
+						colorMap[i][j] = 1;
+				double angle = getPointToPointAngle(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
+				double distance = getPointToPointDistance(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
+				int attackTime = int(distance / 12. + 0.5);
+				// printf("selfx %d, selfy %d \n", self->x/1000, self->y/1000);
+				// printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
+				// printf("%d, %d aT: %d, angle : %f\n", dx, dy, attackTime, angle);
+				gameInfo->Attack(attackTime, angle);
+				tmp.pop();
+			}
+		}
         else return;
     }
 
@@ -823,6 +919,7 @@ void attackAction()
         }
         nextAttackFrame[attackGuid] = frame + attackTime / 50;
     }
+
     lastAction = ATTACK;
 }
 
@@ -955,7 +1052,7 @@ Position findBestTarget()
                 bestTarget = {std::max(0, std::min(49, tempTargetX)), std::max(0, std::min(49, tempTargetY))};
                 unColoredDistance = 1;
             }
-            else if (job == EGG_MAN || job == MONKEY_DOCTOR)
+            else if (job == EGG_MAN || job == MONKEY_DOCTOR  || job == HAPPY_MAN)
             {
                 bestTarget = {CordToGrid(player.second.first.x), CordToGrid(player.second.first.y)};
                 if (nowBulletNum != self->maxBulletNum) 
@@ -971,9 +1068,9 @@ Position findBestTarget()
     // std::cout << "Min Distance 1: " << minDistance << std::endl;
     // std::cout << "Best Target 1: " << bestTarget[0] << " " << bestTarget[1] << std::endl;
 
-    if (directDistance > 4998 && job == PURPLE_FISH)
+    if (directDistance > 4998 && (job == PURPLE_FISH))
         minDistance = MAX_DISTANCE + 1;
-    if (nowBulletNum == 0 && job == MONKEY_DOCTOR && colorMap[nowPosition[0]][nowPosition[1]] != 1)
+    if (nowBulletNum == 0 && (job == MONKEY_DOCTOR || job == HAPPY_MAN) && colorMap[nowPosition[0]][nowPosition[1]] != 1)
         minDistance = MAX_DISTANCE + 1;
 
     if (minDistance < MAX_DISTANCE + 1)
@@ -988,7 +1085,7 @@ Position findBestTarget()
                 auto tempTargetAngleR = getPointToPointAngle(self->x, self->y, GridToCord(final_target_list[count][0]), GridToCord(final_target_list[count][1]));
                 auto angleOffset = fabs(tempTargetAngleR - targetAngleR); 
                 if (angleOffset > M_PI) angleOffset = 2 * M_PI - angleOffset;
-                std::cout << count << " " << angleOffset << std::endl;
+                // std::cout << count << " " << angleOffset << std::endl;
                 if (angleOffset < minAngleOffset)
                 {
                     minAngleOffset = angleOffset;
@@ -1012,7 +1109,11 @@ Position findBestTarget()
 			minDistance = distance;
             targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
 			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
-            if (job == PURPLE_FISH && nowBulletNum < 1) canStepUnColored = false;
+            if ((job == PURPLE_FISH) && nowBulletNum < 1 || job == HAPPY_MAN)
+			{ 
+				canStepUnColored = false;
+				unColoredDistance = 10;
+			}
 		}
 	}
     
@@ -1033,7 +1134,7 @@ Position findBestTarget()
         canStepUnColored = false;
         unColoredDistance = 10;
     }
-    else if (job == EGG_MAN || job == MONKEY_DOCTOR)
+    else if (job == EGG_MAN || job == MONKEY_DOCTOR || job == HAPPY_MAN)
     {
         if (nowBulletNum != self->maxBulletNum) 
         {
@@ -1055,7 +1156,7 @@ void moveAction()
     if (isAct) return;
     auto self = gameInfo->GetSelfInfo();
     // std::cout << "???" << std::endl;
-    nowTarget = findBestTarget();
+	nowTarget = findBestTarget();
     if (nowTarget == nowPosition)
     {
         lastAction = WAIT;
@@ -1064,8 +1165,10 @@ void moveAction()
     }
     dijkstra({int(self->x), int(self->y)});
     auto l = searchWayFromMap(nowPosition, nowTarget);
-    if (job == PURPLE_FISH && tiredFrame > 20 && nowBulletNum > 0)
+    if ((job == PURPLE_FISH || job == HAPPY_MAN) && tiredFrame > 20 && nowBulletNum > 0)
         gameInfo->Attack(0, getPointToPointAngle(self->x, self->y, GridToCord(nowPosition[0]), GridToCord(nowPosition[1]))); 
+    if (job == HAPPY_MAN && tiredFrame > 40 && nowBulletNum > 0)
+        gameInfo->Attack(100, getPointToPointAngle(self->x, self->y, GridToCord(nowPosition[0]), GridToCord(nowPosition[1]))); 
     if (*l.begin() == DONT_MOVE)
     {
         lastAction = WAIT;
