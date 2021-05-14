@@ -96,9 +96,9 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 /****************************************/
 
 
-extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
+// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
-// extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
+extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job5; // Egg Mandoctor
 
 const int ZOOM = 10;
@@ -532,16 +532,16 @@ void initialization(GameApi& g)
     final_target_list_choice =
     {
         // Route 0 for Monkey Doctor 
-        {{12, 12}, {16, 31}, {20, 12}}, 
+        {{6, 6}, {16, 6}, {22, 13}, {23, 25}, {24, 31}, {24, 44}, {8, 44}, {8, 34}, {8, 20}}, 
         // Route 1 for Monkey Doctor 
-        {{39, 9}, {44, 18}, {38, 28}, {40, 39}},
+        {{30, 6}, {42, 6}, {44, 18}, {42, 32}, {44, 44}, {27, 44}, {27, 25}},
         // Route 2 for Purple Fish
         {{16, 17}, {26, 15}, {25, 25}, {35, 23}, {32, 30}, {25, 25}},
 		//Route 3 - 6 for Happy Man
-		{{29, 13}, {35, 10}, {37, 22}}, 
-        {{39, 33}, {32, 40}},
-		{{14, 6}, {21, 12}, {13, 19}},
-		{{10, 38}, {14, 32}, {19, 41}}
+		{{25, 14}, {30, 11}, {33, 6}, {40, 6}, {43, 13}, {38, 20}},
+        {{26, 27}, {35, 27}, {44, 36}, {42, 46}, {30, 44}},
+		{{15, 6}, {22, 13}, {23, 24}, {16, 22}, {11, 16}, {5, 20}, {5, 6}},
+		{{5, 28}, {14, 28}, {27, 34}, {21, 44}, {8, 44}}
     };
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
@@ -550,7 +550,11 @@ void initialization(GameApi& g)
         if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
         else final_target_list = final_target_list_choice[1];
     }
-    else if (job == PURPLE_FISH) final_target_list = final_target_list_choice[2];
+    else if (job == PURPLE_FISH) 
+	{
+		if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
+		else final_target_list = final_target_list_choice[1];
+	}
 	else if (job == HAPPY_MAN)
 	{
 		if (nowPosition[1] < 25)
