@@ -785,6 +785,7 @@ std::array<double, 2> countColor(int window, int nowX, int nowY)
 				if (defaultMap[nowX + k1][nowY + k2] > 0)
 				{
 					countWall += 1;
+					count += 1;
 				}
 				else
 					count += colorMap[nowX + k1][nowY + k2];
