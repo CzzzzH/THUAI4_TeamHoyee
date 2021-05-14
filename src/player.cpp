@@ -879,7 +879,7 @@ void attackAction()
 		else if (job == HAPPY_MAN && nowBulletNum > 1)
 		{
 			nowBulletNum = self->bulletNum;
-			while (nowBulletNum > 1)
+			while (nowBulletNum > 3)
 			{
 				nowBulletNum--;
 				std::priority_queue<countPos> tmp = getLargeColorMap(3);
@@ -971,6 +971,7 @@ void avoidBullet()
     for (auto bullet : gameInfo->GetBullets())
     {
         if (bullet->teamID == self->teamID) continue;
+		if (bullet->bulletType == THUAI4::BulletType::Bucket) continue;
         double bulletUnitMove = bullet->moveSpeed / 50.0;
         double bulletRad = bullet->facingDirection;
         double dx = self->x + unitMove * cos(rad) - bullet->x - bulletUnitMove * cos(bulletRad);
@@ -985,15 +986,13 @@ void avoidBullet()
 		{
 			int type = (int)bullet->bulletType;
 			// if((dx * dx + dy * dy) < ((bulletBomb[type] * 1000 + bullet->moveSpeed + self-> radius) * (bulletBomb[type] * 1000 + bullet->moveSpeed + self-> radius) * (bullet->moveSpeed / self->moveSpeed)))
-			{
-				double avoidRad = 0;
-				if((dx * cos(M_PI / 2 + bulletRad) + dy * sin(M_PI / 2 + bulletRad)) < 0)
-					avoidRad = - M_PI / 2 + bulletRad;
-				else
-					avoidRad = M_PI / 2 + bulletRad;
-				if(bulletNow.size() <= 3)
-					bulletNow.push({bullet->teamID, bullet->facingDirection, bullet->moveSpeed, avoidRad, self->x, self->y, type});
-			}
+			double avoidRad = 0;
+			if((dx * cos(M_PI / 2 + bulletRad) + dy * sin(M_PI / 2 + bulletRad)) < 0)
+				avoidRad = - M_PI / 2 + bulletRad;
+			else
+				avoidRad = M_PI / 2 + bulletRad;
+			if(bulletNow.size() <= 3)
+				bulletNow.push({bullet->teamID, bullet->facingDirection, bullet->moveSpeed, avoidRad, self->x, self->y, type});
 		}
 		// if(atan(std::abs(dx)/std::abs(dy)) + bulletRad < M_PI)
 		// {
