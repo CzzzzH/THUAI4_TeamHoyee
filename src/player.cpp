@@ -95,6 +95,7 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 /*                                      */
 /****************************************/
 
+
 extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
@@ -549,7 +550,12 @@ void initialization(GameApi& g)
         // Route 4 for Purple Fish
         {{16, 15}, {16, 24}, {16, 34}, {26, 34}, {36, 34}, {36, 25}, {36, 15}, {25, 25}},
         // Route 5 for Monkey Docter & Egg Man
-        {{25, 25}}
+        {{25, 25}},
+		//Route 6 - 9, 
+		{{29, 13}, {35, 10}, {37, 22}},
+        {{39, 33}, {32, 40}},
+		{{14, 6}, {21, 12}, {13, 19}},
+		{{10, 38}, {14, 32}, {19, 41}}
     };
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
@@ -571,6 +577,23 @@ void initialization(GameApi& g)
         }
         if (nowPosition[1] > 25) final_target_list = final_target_list_choice[4];
     }
+	else if (playerJob == THUAI4::JobType::HappyMan)
+	{
+		if (nowPosition[1] < 25)
+		{
+			if (nowPosition[0] > 25)
+				final_target_list = final_target_list_choice[6];
+			else
+				final_target_list = final_target_list_choice[8];
+		}
+		else
+		{
+			if (nowPosition[0] > 25)
+				final_target_list = final_target_list_choice[7];
+			else
+				final_target_list = final_target_list_choice[9];
+		}
+	}
 	finalTarget = final_target_list[0];
     srand(time(NULL));
 }
@@ -826,7 +849,7 @@ void attackAction()
 
     for (auto player: players)
     {
-        std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y;
+        std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y << std::endl;
         if (self->teamID == player.second.first.teamID || player.second.first.hp <= 0 || player.second.first.isDying) continue;
         double distance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
         if (distance < minDistance && frame > nextAttackFrame[player.second.first.guid])
@@ -1294,5 +1317,5 @@ void AI::play(GameApi& g)
     moveAction();
     updateEnd();
     processEnd = clock();
-    // debugInfo();
+    debugInfo();
 }
