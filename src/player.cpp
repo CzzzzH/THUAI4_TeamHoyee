@@ -64,25 +64,43 @@ struct countPos
 {
 	double count;
 	double countWall;
+	double cosAng;
 	int nowX;
 	int nowY;
-	countPos(double count, double countWall, int nowX, int nowY) : 
-	count(count), countWall(countWall), nowX(nowX), nowY(nowY){}
+	countPos(double count, double countWall, int nowX, int nowY, double cosAng) : 
+	count(count), countWall(countWall), nowX(nowX), nowY(nowY), cosAng(cosAng){}
 	bool operator<(const countPos& n) const
 	{
 		if(count > n.count)
 		{
 			return true;
 		}
-		else if(count == n.count)
+		else if (count == n.count) 
 		{
-			return countWall > n.countWall;
+			if(cosAng > n.cosAng)
+			{
+				return true;
+			}
+			else if(cosAng == n.cosAng) 
+			{
+				return countWall > n.countWall;
+			}
+			else
+			{
+				return false;
+			}
 		}
 		else
 		{
 			return false;
 		}
 	}
+};
+
+struct timeAng
+{
+	int time;
+	int ang;
 };
 
 enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
@@ -95,7 +113,7 @@ enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
 /*                                      */
 /****************************************/
 
-
+Position findBestTarget();
 extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job3; // Purple Fish
 // extern const THUAI4::JobType playerJob = THUAI4::JobType::Job4; // Monkey 
@@ -833,11 +851,12 @@ std::array<double, 2> countColor(int window, int nowX, int nowY)
 	return {count, countWall};
 }
 
-std::priority_queue<countPos> getLargeColorMap(int window)
+std::priority_queue<countPos> getLargeColorMap(int window, Position tmpTarget)
 {
 	auto self = gameInfo->GetSelfInfo();
 	uint32_t nowX = self->x / 1000;
 	uint32_t nowY = self->y / 1000;
+	std::array<int, 2> vec1 = {nowX - tmpTarget[0], nowY - tmpTarget[1]};
 	std::priority_queue<countPos> count;
 	int extend = window;
 	for (int i = -extend; i <= extend; i += window)
@@ -845,24 +864,76 @@ std::priority_queue<countPos> getLargeColorMap(int window)
 		for (int j = -extend; j <= extend; j += window)
 		{
 			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + j);
-			count.push({tmpC[0], tmpC[1], nowX + i, nowY + j});
-			printf("tmpC %f %f %d %d \n", tmpC[0], tmpC[1], nowX + i, nowY + j);
+			std::array<int, 2> vec2 = {i, j};
+			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
+			if(cosAng != 0)
+			{
+				cosAng /= length(vec1) * length(vec2);
+			}
+			cosAng = -cosAng;
+			count.push({tmpC[0], tmpC[1], nowX + i, nowY + j, cosAng});
+			printf("target %d %d tmpC %f %f bulPoint %d %d %f \n", tmpTarget[0], tmpTarget[1], tmpC[0], tmpC[1], nowX + i, nowY + j, cosAng);
 		}
 	}
-	while(count.top().count > 0.7)
+	while(count.top().count > 0.5)
 	{
+		while(!count.empty()) count.pop();
 		extend += window;
 		for(int i = -extend;i <= extend;i += window)
 		{
-			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + extend);
-			count.push({tmpC[0], tmpC[1], nowX + i, nowY + extend});
+			int X = nowX + i;
+			int Y = nowY + extend;
+			std::array<double, 2> tmpC = countColor(window, X, Y);
+			std::array<int, 2> vec2 = {i, extend};
+			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
+			if(cosAng != 0)
+			{
+				cosAng /= length(vec1) * length(vec2);
+			}
+			cosAng = -cosAng;
+			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
+				count.push({tmpC[0], tmpC[1], X, Y, cosAng});
+
+			Y = nowY - extend;
+			tmpC = countColor(window, X, Y);
+			vec2 = {i, -extend};
+			cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
+			if(cosAng != 0)
+			{
+				cosAng /= length(vec1) * length(vec2);
+			}
+			cosAng = -cosAng;
+			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
+				count.push({tmpC[0], tmpC[1], X, Y, cosAng});
 		}
 		for(int j = -extend + window;j <= extend - window;j += window)
 		{
-			std::array<double, 2> tmpC = countColor(window, nowX + extend, nowY + j);
-			count.push({tmpC[0], tmpC[1],  nowX + extend, nowY + j});
+			int X = nowX + extend;
+			int Y = nowY + j;
+			std::array<double, 2> tmpC = countColor(window, X, Y);
+			std::array<int, 2> vec2 = {extend, j};
+			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
+			if(cosAng != 0)
+			{
+				cosAng /= length(vec1) * length(vec2);
+			}
+			cosAng = -cosAng;
+			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
+				count.push({tmpC[0], tmpC[1],  X, Y, cosAng});
+
+			X = nowX - extend;
+			tmpC = countColor(window, X, Y);
+			vec2 = {-extend, j};
+			cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
+			if(cosAng != 0)
+			{
+				cosAng /= length(vec1) * length(vec2);
+			}
+			cosAng = -cosAng;
+			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
+				count.push({tmpC[0], tmpC[1],  X, Y, cosAng});
 		}
-		if(extend >= 8 * window)
+		if(extend >= 10 * window)
 		{
 			// count.push({});
 			break;
@@ -915,10 +986,11 @@ void attackAction()
 		else if (job == HAPPY_MAN && nowBulletNum > 1)
 		{
 			nowBulletNum = self->bulletNum;
-			while (nowBulletNum > 3)
+			Position tmpTarget = findBestTarget();
+			while (nowBulletNum > 5)
 			{
 				nowBulletNum--;
-				std::priority_queue<countPos> tmp = getLargeColorMap(3);
+				std::priority_queue<countPos> tmp = getLargeColorMap(3, tmpTarget);
 				countPos nowBul = tmp.top();
 				for (int i = std::max(0, nowBul.nowX) - 1; i <= std::min(49, nowBul.nowX) + 1; ++i)
 					for (int j = std::max(0, nowBul.nowY) - 1; j <= std::min(49, nowBul.nowY) + 1; ++j)
@@ -927,9 +999,10 @@ void attackAction()
 				double distance = getPointToPointDistance(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
 				int attackTime = int(distance / 12. + 0.5);
 				// printf("selfx %d, selfy %d \n", self->x/1000, self->y/1000);
-				// printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
+				printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
 				// printf("%d, %d aT: %d, angle : %f\n", dx, dy, attackTime, angle);
 				gameInfo->Attack(attackTime, angle);
+
 				tmp.pop();
 			}
             return;
@@ -1319,24 +1392,50 @@ void sendMessage()
     if (isAct == true) return;
 	auto self_playerID = getSelfPlayerID();
 	auto self = gameInfo->GetSelfInfo();
+	std::string strToSend;
+	// std::cout << "send : " << std::endl;
+	strToSend.push_back((char)CordToGrid(self->x));
+	strToSend.push_back((char)CordToGrid(self->y));
+	// std::cout << "\t" << CordToGrid(self->x) << " , " << CordToGrid(self->y) << std::endl;
+	int bit_index = 0;
+	char byte = 0;
+	for (int x = std::max(CordToGrid(self->x) - 4, 0); x < std::min(CordToGrid(self->x) + 4, 50); ++x)
+	{
+		// std::cout << "\t";
+		for (int y = std::max(CordToGrid(self->y) - 4, 0); y < std::min(CordToGrid(self->y) + 4, 50); ++y)
+		{
+			// std::cout << (int)colorMap[x][y] << " ";
+			if (colorMap[x][y] == 1)
+				byte |= (char)(1 << bit_index);
+			bit_index++;
+			if (bit_index > 6)
+			{
+				strToSend.push_back(byte);
+				bit_index = 0;
+				byte = 0;
+			}
+		}
+		// std::cout << std::endl;
+	}
+	strToSend.push_back(byte);
+	// for (auto c : strToSend){
+	// 	std::cout << (int)c << " ";
+	// }
+	// std::cout << std::endl;
+	for (auto p : gameInfo->GetCharacters())
+	{
+		if (p->teamID == self->teamID)
+			continue;
+		if (p->isDying)
+			continue;
+		strToSend.push_back((char)CordToGrid(p->x));
+		strToSend.push_back((char)CordToGrid(p->y));
+		strToSend.push_back((char)(p->hp / 100));
+	}
 	for (int i = 0; i < 3; ++i)
 	{
 		if (i == self_playerID)
 			continue;
-		std::string strToSend;
-		strToSend.push_back((char)CordToGrid(self->x));
-		strToSend.push_back((char)CordToGrid(self->y));
-		auto new_players = gameInfo->GetCharacters();
-		for (auto p : new_players)
-		{
-			if (p->teamID == self->teamID)
-				continue;
-			if (p->isDying)
-				continue;
-			strToSend.push_back((char)CordToGrid(p->x));
-			strToSend.push_back((char)CordToGrid(p->y));
-			strToSend.push_back((char)(p->hp / 100));
-		}
 		gameInfo->Send(i, strToSend);
 	}
 }
@@ -1355,9 +1454,32 @@ void recieveMessage()
 	// std::cout << "Recieved : " << std::endl;
 	while (gameInfo->TryGetMessage(recieveStr))
 	{
+		int senderX = recieveStr[0];
+		int senderY = recieveStr[1];
+		// std::cout << "\t" << senderX << " , " << senderY << std::endl;
 		int i = 2;
+		int bit_index = 0;
+		for (int x = std::max(senderX - 4, 0); x < std::min(senderX + 4, 50); ++x)
+		{
+			// std::cout << "\t";
+			for (int y = std::max(senderY - 4, 0); y < std::min(senderY + 4, 50); ++y)
+			{
+				bool bit = (char)recieveStr[i] & (char)(1 << bit_index);
+				// std::cout << bit << " ";
+				colorMap[x][y] == bit ? 1 : -1;
+				bit_index++;
+				if (bit_index > 6)
+				{
+					i++;
+					bit_index = 0;
+				}
+			}
+			// std::cout << std::endl;
+		}
+		i++;
 		for(; i < recieveStr.size();)
 		{
+			// std::cout << "\t";
 			THUAI4::Character c;
 			c.teamID = !gameInfo->GetSelfInfo()->teamID;
 			c.x = GridToCord((int)recieveStr[i]);
@@ -1365,7 +1487,8 @@ void recieveMessage()
 			c.y = GridToCord((int)recieveStr[i]);
 			++i;
 			c.hp = int(recieveStr[i]) * 100;
-			++i;    
+			++i;
+			// std::cout << -i << " : " << c.x << " , " << c.y << " " << c.hp << std::endl;;
 			players.insert(std::make_pair(-i, std::make_pair(c, frame)));
 		}
 	}
