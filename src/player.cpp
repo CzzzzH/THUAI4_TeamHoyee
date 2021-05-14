@@ -755,12 +755,12 @@ void attackAction()
         std::cout << "Player: " << player.second.first.guid << " " << player.second.first.x << " " << player.second.first.y;
         if (self->teamID == player.second.first.teamID || player.second.first.hp <= 0 || player.second.first.isDying) continue;
         double distance = getPointToPointDistance(self->x, self->y, player.second.first.x, player.second.first.y);
-        if (distance < minDistance && frame > nextAttackFrame[player.second.guid])
+        if (distance < minDistance && frame > nextAttackFrame[player.second.first.guid])
         {
             minDistance = distance;
-            attackHp = player.second.hp;
-            attackGuid = player.second.guid;
-            angle = getPointToPointAngle(self->x, self->y, player.second.x, player.second.y);
+            attackHp = player.second.first.hp;
+            attackGuid = player.second.first.guid;
+            angle = getPointToPointAngle(self->x, self->y, player.second.first.x, player.second.first.y);
             if (job == MONKEY_DOCTOR)
             {
                 if (minDistance > 3000) attackTime = int(minDistance / 18. + 0.5);
