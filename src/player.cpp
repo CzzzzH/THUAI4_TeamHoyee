@@ -807,13 +807,32 @@ std::priority_queue<countPos> getLargeColorMap(int window)
 	uint32_t nowY = self->y / 1000;
 	std::priority_queue<countPos> count;
 	int extend = window;
-	for (int i = -extend; i <= extend; i += extend)
+	for (int i = -extend; i <= extend; i += window)
 	{
-		for (int j = -extend; j <= extend; j += extend)
+		for (int j = -extend; j <= extend; j += window)
 		{
 			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + j);
 			count.push({tmpC[0], tmpC[1], nowX + i, nowY + j});
 			printf("tmpC %f %f %d %d \n", tmpC[0], tmpC[1], nowX + i, nowY + j);
+		}
+	}
+	while(count.top().count > 0.7)
+	{
+		extend += window;
+		for(int i = -extend;i <= extend;i += window)
+		{
+			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + extend);
+			count.push({tmpC[0], tmpC[1], nowX + i, nowY + extend});
+		}
+		for(int j = -extend + window;j <= extend - window;j += window)
+		{
+			std::array<double, 2> tmpC = countColor(window, nowX + extend, nowY + j);
+			count.push({tmpC[0], tmpC[1],  nowX + extend, nowY + j});
+		}
+		if(extend >= 8 * window)
+		{
+			// count.push({});
+			break;
 		}
 	}
 	return count;
@@ -846,6 +865,10 @@ void attackAction()
                     break;
                 }
             }
+			else if(job == HAPPY_MAN)
+			{
+				attackTime = int(distance / 12.0 + 0.5);
+			}
         }
   	}
 
@@ -899,6 +922,16 @@ void attackAction()
         }
         nextAttackFrame[attackGuid] = frame + attackTime / 50;
     }
+	else if (job == HAPPY_MAN)
+	{
+		nowBulletNum = self->bulletNum;
+        while (nowBulletNum > 0 && attackHp > 0)
+        {
+            nowBulletNum--;
+            attackHp -= self->ap;
+            gameInfo->Attack(attackTime, angle);
+        }
+	}
 
     lastAction = ATTACK;
 }
