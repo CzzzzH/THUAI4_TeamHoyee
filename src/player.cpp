@@ -152,6 +152,7 @@ const unsigned char DONT_MOVE = 8;
 static unsigned char route[LENGTH][LENGTH];
 static double distance_table[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
+static int colorTimeMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static double areaValue[4];
 static int happyReminder;
@@ -641,13 +642,17 @@ void refreshColorMap()
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 			{
-				if((frame % 20) == 0)
+				// if((frame % 20) == 0)
+				// {
+				// 	int X = rand() % 50;
+				// 	int Y = rand() % 50;
+				// 	for (int i = std::max(0, X - 1); i <= std::min(49, Y + 1); ++i)
+				// 		for (int j = std::max(0, Y - 1); j <= std::min(49, Y + 1); ++j)
+				// 			colorMap[i][j] = 1;
+				// }
+				if (colorTimeMap[i][j] < frame - 40)
 				{
-					int X = rand() % 50;
-					int Y = rand() % 50;
-					for (int i = std::max(0, X) - 1; i <= std::min(49, Y) + 1; ++i)
-						for (int j = std::max(0, Y) - 1; j <= std::min(49, Y) + 1; ++j)
-							colorMap[i][j] = 1;
+					colorMap[i][j] = 0;
 				}
         continue;
 			}
@@ -655,14 +660,19 @@ void refreshColorMap()
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
+				colorTimeMap[i][j] = frame;
 			}
 			else if (gameInfo->GetCellColor(i, j) == gameInfo->GetSelfTeamColor())
 			{
                 myColorCount++;
                 colorMap[i][j] = 1;
+				colorTimeMap[i][j] = frame;
 			}
 			else
-                colorMap[i][j] = -1;				
+			{
+                colorMap[i][j] = -1;	
+				colorTimeMap[i][j] = frame;
+			}	
 		}
 	}
     if (totalCount > 1.5 * myColorCount) near = true;
@@ -818,6 +828,7 @@ void virtualColorMap(double angleR)
         //         block += defaultMap[i][j];
         if (block > 0) break;
         colorMap[targetX][targetY] = 1;
+		colorTimeMap[targetX][targetY] = frame;
     }
 }
 
@@ -973,7 +984,10 @@ void attackAction()
                 std::cout << "Block Index: " << nowBul.blockIndex << std::endl;
 				for (int i = std::max(0, happyBlock[nowBul.blockIndex].gridX - 1); i <= std::min(49, happyBlock[nowBul.blockIndex].gridX + 1); ++i)
 					for (int j = std::max(0, happyBlock[nowBul.blockIndex].gridY - 1); j <= std::min(49, happyBlock[nowBul.blockIndex].gridY + 1); ++j)
-						colorMap[i][j] = 1;
+						{
+						  colorMap[i][j] = 1;
+						  colorTimeMap[i][j] = frame;
+					  }
 				double angle = getPointToPointAngle(self->x, self->y, GridToCord(happyBlock[nowBul.blockIndex].gridX), GridToCord(happyBlock[nowBul.blockIndex].gridY));
 				double distance = getPointToPointDistance(self->x, self->y, GridToCord(happyBlock[nowBul.blockIndex].gridX), GridToCord(happyBlock[nowBul.blockIndex].gridY));
 				int attackTime = int(distance / 12. + 0.5);
@@ -1440,6 +1454,7 @@ void receiveMessage()
 				bool bit = (char)recieveStr[i] & (char)(1 << bit_index);
 				// std::cout << bit << " ";
 				colorMap[x][y] == bit ? 1 : -1;
+				colorTimeMap[x][y] = frame;
 				bit_index++;
 				if (bit_index > 6)
 				{
