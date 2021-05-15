@@ -135,6 +135,7 @@ const static unsigned char defaultMap[LENGTH][LENGTH] = {
 
 static bool canStepUnColored = true;
 static int unColoredDistance = 10;
+static Position startPosition;
 const static double MAX_DISTANCE = 9999999999;
 unsigned char dynamicMap[LENGTH][LENGTH];
 
@@ -593,6 +594,7 @@ void initialization(GameApi& g)
         }
 
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
+	startPosition = { CordToGrid(self->x), CordToGrid(self->y) };
     if (job == MONKEY_DOCTOR || job == EGG_MAN)
     {
         if (nowPosition[0] < 25) final_target_list = final_target_list_choice[0];
@@ -638,8 +640,18 @@ void refreshColorMap()
 		for (int j = 0; j < LENGTH; j++)
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
-				continue;
-            totalCount++;
+			{
+				if((frame % 20) == 0)
+				{
+					int X = rand() % 50;
+					int Y = rand() % 50;
+					for (int i = std::max(0, X) - 1; i <= std::min(49, Y) + 1; ++i)
+						for (int j = std::max(0, Y) - 1; j <= std::min(49, Y) + 1; ++j)
+							colorMap[i][j] = 1;
+				}
+        continue;
+			}
+      totalCount++;
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
@@ -653,7 +665,7 @@ void refreshColorMap()
                 colorMap[i][j] = -1;				
 		}
 	}
-    if (totalCount > 2 * myColorCount) near = true;
+    if (totalCount > 1.5 * myColorCount) near = true;
     else near = false;
 }
 
@@ -700,6 +712,29 @@ void refreshProps()
 	}
 }
 
+void refreshRoad()
+{
+	auto self = gameInfo->GetSelfInfo();
+	// nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
+	std::vector<Position> posList;
+    if (frame % 1000 == 0)
+    {
+        for (int i = 0;i < 50;i++)
+		{
+			int X = rand() % 50;
+			int Y = rand() % 50;	
+			if(defaultMap[X][Y] == 0)
+				posList.push_back({X, Y});
+		}
+		final_target_list.assign(posList.begin(),posList.end());
+		finalTarget = final_target_list[0];
+		for(auto it : final_target_list)
+		{
+			printf("%d %d\n", it[0], it[1]);
+		}
+    }
+}
+
 void updateInfo(GameApi& g)
 {
     if (frame == 0) 
@@ -719,6 +754,7 @@ void updateInfo(GameApi& g)
     refreshColorMap();
 	refreshPlayers();
 	refreshProps();
+	refreshRoad();
     if (colorMap[nowPosition[0]][nowPosition[1]] != 1 && !self->isDying) tiredFrame++;
     else tiredFrame = 0;
 	memcpy(dynamicMap, defaultMap, sizeof(defaultMap));
@@ -1180,13 +1216,13 @@ Position findBestTarget()
 	{
         if (defaultMap[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)] > 0) continue;
 		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
-		if (distance < minDistance)
+		if (distance < minDistance && distance < 20000)
 		{
 			minDistance = distance;
             targetAngleR = getPointToPointAngle(self->x, self->y, prop.second.x, prop.second.y);
 			bestTarget = {CordToGrid(prop.second.x), CordToGrid(prop.second.y)};
             unColoredDistance = 2;
-            if (bulletRecoverTime / double(self->CD) > 0.3 && nowBulletNum != self->maxBulletNum) 
+            if (bulletRecoverTime / double(self->CD) > 0.1 && nowBulletNum != self->maxBulletNum) 
                 canStepUnColored = false;
 		}
 	}
