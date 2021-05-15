@@ -215,8 +215,16 @@ struct countPos
             }
             else
             {
-                if (low) return happyBlock[blockIndex].gridY < happyBlock[n.blockIndex].gridY;
-                else happyBlock[blockIndex].gridY > happyBlock[n.blockIndex].gridY;
+                if (low)
+                {
+                    if (happyBlock[blockIndex].gridY < 10 && happyBlock[n.blockIndex].gridY < 10) return rand() % 2;
+                    else return happyBlock[blockIndex].gridY < happyBlock[n.blockIndex].gridY;
+                }
+                else
+                {
+                    if (happyBlock[blockIndex].gridY >= 40 && happyBlock[n.blockIndex].gridY >= 40) return rand() % 2;
+                    else return happyBlock[blockIndex].gridY > happyBlock[n.blockIndex].gridY;
+                }
             }
 		}
 		else
@@ -914,7 +922,20 @@ std::deque<countPos> getLargeColorMap()
         for (int j = 0; j < 16; ++j)
         {
             int blockIndex = i * 16 + j;
-            if (blockIndex % 2 != happyReminder) continue;
+            double distance = getPointToPointAngle(self->x, self->y, GridToCord(happyBlock[blockIndex].gridX), GridToCord(happyBlock[blockIndex].gridY));
+            if (distance > 5000)
+            {
+                if (happyReminder)
+                {
+                    if (i % 2 == 0 && j % 2 == 0) continue;
+                    if (i % 2 == 1 && j % 2 == 1) continue;
+                }
+                else
+                {
+                    if (i % 2 == 0 && j % 2 == 1) continue;
+                    if (i % 2 == 1 && j % 2 == 0) continue;
+                }
+            }
             count.push_back({countColor(happyBlock[blockIndex].gridX, happyBlock[blockIndex].gridY), blockIndex});
         }
 	return count;
