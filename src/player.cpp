@@ -5,6 +5,7 @@
 extern const bool asynchronous = true;
 
 #include <ext/pb_ds/priority_queue.hpp>
+#include <deque>
 #include <random>
 #include <iostream>
 #include <unordered_map>
@@ -21,7 +22,7 @@ extern const bool asynchronous = true;
 
 /****************************************/
 /*                                      */
-/*          Struct & Enum               */
+/*                  Enums               */
 /*                                      */
 /****************************************/
 
@@ -33,14 +34,19 @@ namespace
 
 typedef std::array<int, 2> Position;
 
-struct frontier_node
+enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
+enum Action {MOVE, ATTACK, PRIOR_ATTACK, PICK, USE, WAIT};
+enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
+
+/****************************************/
+/*                                      */
+/*          Global Variables             */
+/*                                      */
+/****************************************/
+
+struct HappyBlock
 {
-	double distance;
-	std::array<int, 2> position;
-	bool operator>(const frontier_node& n) const
-	{
-		return distance > n.distance;
-	}
+    int gridX, gridY; 
 };
 
 const int bulletBomb[7] = {3, 3, 7, 1, 7, 3, 3};
@@ -60,58 +66,6 @@ struct bulletCache
     	return moveSpeed < a.moveSpeed;
 	}
 };
-struct countPos
-{
-	double count;
-	double countWall;
-	double cosAng;
-	int nowX;
-	int nowY;
-	countPos(double count, double countWall, int nowX, int nowY, double cosAng) : 
-	count(count), countWall(countWall), nowX(nowX), nowY(nowY), cosAng(cosAng){}
-	bool operator<(const countPos& n) const
-	{
-		if(count > n.count)
-		{
-			return true;
-		}
-		else if (count == n.count) 
-		{
-			if(cosAng > n.cosAng)
-			{
-				return true;
-			}
-			else if(cosAng == n.cosAng) 
-			{
-				return countWall > n.countWall;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		else
-		{
-			return false;
-		}
-	}
-};
-
-struct timeAng
-{
-	int time;
-	int ang;
-};
-
-enum State {WAIT_BULLET, EXPAND_FIELD, SEARCH_ENEMY};
-enum Action {MOVE, ATTACK, PRIOR_ATTACK, PICK, USE, WAIT};
-enum Job {PURPLE_FISH, EGG_MAN, MONKEY_DOCTOR, HAPPY_MAN};
-
-/****************************************/
-/*                                      */
-/*          Global Variables             */
-/*                                      */
-/****************************************/
 
 Position findBestTarget();
 extern const THUAI4::JobType playerJob = THUAI4::JobType::Job1; // Happy Man
@@ -199,15 +153,17 @@ static double distance_table[LENGTH][LENGTH];
 static char colorMap[LENGTH][LENGTH];
 static char colorValueMap[LENGTH][LENGTH];
 static double areaValue[4];
+static int happyReminder;
 static int frame = 0, tiredFrame = 0;
 static int nowBulletNum = 0, lastBulletNum = 0, priorAttackTime = 0;
 static int lastX, lastY, lastAttackAngle;
-static bool isAct, getItem;
+static bool isAct, getItem, near, low;
 static double bulletRecoverTime = 0;
 static clock_t processBegin, processEnd;
 
 Position lastPosition, nowPosition, nextPosition, nowTarget, finalTarget;
 static std::vector<std::vector<Position>> final_target_list_choice;
+static std::vector<HappyBlock> happyBlock;
 std::vector<Position> final_target_list;
 std::priority_queue<bulletCache> bulletNow;
 
@@ -223,6 +179,57 @@ const std::array<int, 2> operate[] = {
 
 const int dirX[8]= {1, 1, 0, -1, -1, -1, 0, 1};
 const int dirY[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+
+struct frontier_node
+{
+	double distance;
+	std::array<int, 2> position;
+	bool operator>(const frontier_node& n) const
+	{
+		return distance > n.distance;
+	}
+};
+
+inline double getGridDistance(Position source, Position target)
+{
+    return sqrt((source[0] - target[0]) * (source[0] - target[0]) + (source[1] - target[1]) * (source[1] - target[1]));
+}
+
+struct countPos
+{
+    int blockIndex, count;
+	countPos(int count, int blockIndex) : count(count), blockIndex(blockIndex){}
+	bool operator<(const countPos& n) const
+	{
+		if (count > n.count)
+		{
+			return true;
+		}
+		else if (count == n.count) 
+		{
+            if (near)
+            {
+                return getGridDistance({nowPosition[0], nowPosition[1]}, {happyBlock[blockIndex].gridX, happyBlock[blockIndex].gridY})
+                    < getGridDistance({nowPosition[0], nowPosition[1]}, {happyBlock[n.blockIndex].gridX, happyBlock[n.blockIndex].gridY});
+            }
+            else
+            {
+                if (low) return happyBlock[blockIndex].gridY < happyBlock[n.blockIndex].gridY;
+                else happyBlock[blockIndex].gridY > happyBlock[n.blockIndex].gridY;
+            }
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
+
+struct timeAng
+{
+	int time;
+	int ang;
+};
 
 /****************************************/
 /*                                      */
@@ -296,11 +303,6 @@ inline double getPointToPointDistance(double sourceX, double sourceY, double tar
     return sqrt((sourceX - targetX) * (sourceX - targetX) + (sourceY - targetY) * (sourceY - targetY));
 }
 
-inline double getGridDistance(Position source, Position target)
-{
-    return sqrt((source[0] - target[0]) * (source[0] - target[0]) + (source[1] - target[1]) * (source[1] - target[1]));
-}
-
 inline double angleToRadian(double value)
 {
 	return value * M_PI / 180.;
@@ -319,6 +321,21 @@ inline int CordToGrid(double value)
 inline int GridToCord(int value)
 {
     return value * 1000 + 500;
+}
+
+void changeNear()
+{
+    int myColorCount = 0, totalCount = 0;
+	for (int i = 0; i < LENGTH; i++)
+		for (int j = 0; j < LENGTH; j++)
+		{
+			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
+				continue;
+            totalCount++;
+            if (colorMap[i][j]) myColorCount++;
+        }
+    if (totalCount > 1.5 * myColorCount) near = true;
+    else near = false;
 }
 
 /****************************************/
@@ -567,6 +584,14 @@ void initialization(GameApi& g)
 		{{29, 29}, {31, 40}, {18, 43}, {17, 47}, {6, 44}, {3, 33}, {19, 36}, {21, 31}, {26, 26}}
     };
 
+    happyBlock.resize(256);
+    for (int i = 0; i < 16; ++i)
+        for (int j = 0; j < 16; ++j)
+        {
+            happyBlock[i * 16 + j].gridX = i * 3 + 2;
+            happyBlock[i * 16 + j].gridY = j * 3 + 2;
+        }
+
     nowPosition = { CordToGrid(self->x), CordToGrid(self->y) };
     if (job == MONKEY_DOCTOR || job == EGG_MAN)
     {
@@ -579,9 +604,13 @@ void initialization(GameApi& g)
 		else final_target_list = final_target_list_choice[3];
 	}
 	else if (job == HAPPY_MAN)
-	{
+	{   
+        if (nowPosition[1] == 2 || nowPosition[1] == 47) happyReminder = 0;  
+        else happyReminder = 1;
+
 		if (nowPosition[1] < 25)
 		{
+            low = false;
 			if (nowPosition[0] > 25)
 				final_target_list = final_target_list_choice[6];
 			else
@@ -589,6 +618,7 @@ void initialization(GameApi& g)
 		}
 		else
 		{
+            low = true;
 			if (nowPosition[0] > 25)
 				final_target_list = final_target_list_choice[7];
 			else
@@ -602,24 +632,29 @@ void initialization(GameApi& g)
 void refreshColorMap()
 {
     // std::cout << "Refresh Color: " << std::endl;
+    int myColorCount = 0, totalCount = 0;
 	for (int i = 0; i < LENGTH; i++)
 	{
 		for (int j = 0; j < LENGTH; j++)
 		{
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::Invisible)
 				continue;
+            totalCount++;
 			if (gameInfo->GetCellColor(i, j) == THUAI4::ColorType::None)
 			{
 				colorMap[i][j] = 0;
 			}
 			else if (gameInfo->GetCellColor(i, j) == gameInfo->GetSelfTeamColor())
 			{
+                myColorCount++;
                 colorMap[i][j] = 1;
 			}
 			else
                 colorMap[i][j] = -1;				
 		}
 	}
+    if (totalCount > 2 * myColorCount) near = true;
+    else near = false;
 }
 
 void refreshPlayers()
@@ -823,122 +858,29 @@ double getBestExtendAngle()
     return angleToRadian(bestAngle);
 }
 
-std::array<double, 2> countColor(int window, int nowX, int nowY)
+int countColor(int x, int y)
 {
-	double count = 0;
-	double countWall = 0;
-	double valid = 0;
-	int extend = (window - 1) / 2;
-	for (int k1 = -extend; k1 <= extend; k1++)
-	{
-		for (int k2 = -extend; k2 <= extend; k2++)
-		{
-			if ((nowX + k1 >= 0) && (nowX + k1 <= 49) && (nowY + k2 >= 0) && (nowY + k2 <= 49))
-			{
-				valid = valid + 1;
-				if (defaultMap[nowX + k1][nowY + k2] > 0)
-				{
-					countWall += 1;
-					count += 1;
-				}
-				else
-					count += colorMap[nowX + k1][nowY + k2];
-			}
-		}
-	}
-	count /= valid;
-	countWall /= valid;
-	return {count, countWall};
+    int count = 0;
+	for (int i = std::max(0, x) - 1; i <= std::min(49, x) + 1; ++i)
+        for (int j = std::max(0, y) - 1; j <= std::min(49, y) + 1; ++j)
+        {
+            if (defaultMap[i][j] > 0) continue;
+            if (colorMap[i][j] != 1) count++;
+        }
+    return count;
 }
 
-std::priority_queue<countPos> getLargeColorMap(int window, Position tmpTarget)
+std::deque<countPos> getLargeColorMap()
 {
 	auto self = gameInfo->GetSelfInfo();
-	uint32_t nowX = self->x / 1000;
-	uint32_t nowY = self->y / 1000;
-	std::array<int, 2> vec1 = {nowX - tmpTarget[0], nowY - tmpTarget[1]};
-	std::priority_queue<countPos> count;
-	int extend = window;
-	for (int i = -extend; i <= extend; i += window)
-	{
-		for (int j = -extend; j <= extend; j += window)
-		{
-			std::array<double, 2> tmpC = countColor(window, nowX + i, nowY + j);
-			std::array<int, 2> vec2 = {i, j};
-			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
-			if(cosAng != 0)
-			{
-				cosAng /= length(vec1) * length(vec2);
-			}
-			cosAng = -cosAng;
-			count.push({tmpC[0], tmpC[1], nowX + i, nowY + j, cosAng});
-			printf("target %d %d tmpC %f %f bulPoint %d %d %f \n", tmpTarget[0], tmpTarget[1], tmpC[0], tmpC[1], nowX + i, nowY + j, cosAng);
-		}
-	}
-	while(count.top().count > 0.5)
-	{
-		while(!count.empty()) count.pop();
-		extend += window;
-		for(int i = -extend;i <= extend;i += window)
-		{
-			int X = nowX + i;
-			int Y = nowY + extend;
-			std::array<double, 2> tmpC = countColor(window, X, Y);
-			std::array<int, 2> vec2 = {i, extend};
-			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
-			if(cosAng != 0)
-			{
-				cosAng /= length(vec1) * length(vec2);
-			}
-			cosAng = -cosAng;
-			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
-				count.push({tmpC[0], tmpC[1], X, Y, cosAng});
-
-			Y = nowY - extend;
-			tmpC = countColor(window, X, Y);
-			vec2 = {i, -extend};
-			cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
-			if(cosAng != 0)
-			{
-				cosAng /= length(vec1) * length(vec2);
-			}
-			cosAng = -cosAng;
-			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
-				count.push({tmpC[0], tmpC[1], X, Y, cosAng});
-		}
-		for(int j = -extend + window;j <= extend - window;j += window)
-		{
-			int X = nowX + extend;
-			int Y = nowY + j;
-			std::array<double, 2> tmpC = countColor(window, X, Y);
-			std::array<int, 2> vec2 = {extend, j};
-			double cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
-			if(cosAng != 0)
-			{
-				cosAng /= length(vec1) * length(vec2);
-			}
-			cosAng = -cosAng;
-			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
-				count.push({tmpC[0], tmpC[1],  X, Y, cosAng});
-
-			X = nowX - extend;
-			tmpC = countColor(window, X, Y);
-			vec2 = {-extend, j};
-			cosAng = (vec1[0] * vec2[0] + vec1[1] * vec2[1]);
-			if(cosAng != 0)
-			{
-				cosAng /= length(vec1) * length(vec2);
-			}
-			cosAng = -cosAng;
-			if(X >= 0 && X <= 49 && Y >= 0 && Y <= 49)
-				count.push({tmpC[0], tmpC[1],  X, Y, cosAng});
-		}
-		if(extend >= 10 * window)
-		{
-			// count.push({});
-			break;
-		}
-	}
+	std::deque<countPos> count;
+    for (int i = 0; i < 16; ++i)
+        for (int j = 0; j < 16; ++j)
+        {
+            int blockIndex = i * 16 + j;
+            if (blockIndex % 2 != happyReminder) continue;
+            count.push_back({countColor(happyBlock[blockIndex].gridX, happyBlock[blockIndex].gridY), blockIndex});
+        }
 	return count;
 }
 
@@ -986,24 +928,24 @@ void attackAction()
 		else if (job == HAPPY_MAN && nowBulletNum > 1)
 		{
 			nowBulletNum = self->bulletNum;
-			Position tmpTarget = findBestTarget();
-			while (nowBulletNum > 5)
+			while (nowBulletNum > 2)
 			{
 				nowBulletNum--;
-				std::priority_queue<countPos> tmp = getLargeColorMap(3, tmpTarget);
-				countPos nowBul = tmp.top();
-				for (int i = std::max(0, nowBul.nowX) - 1; i <= std::min(49, nowBul.nowX) + 1; ++i)
-					for (int j = std::max(0, nowBul.nowY) - 1; j <= std::min(49, nowBul.nowY) + 1; ++j)
+				std::deque<countPos> tmp = getLargeColorMap();
+                std::sort(tmp.begin(), tmp.end());
+				countPos nowBul = tmp.front();
+                std::cout << "Block Index: " << nowBul.blockIndex << std::endl;
+				for (int i = std::max(0, happyBlock[nowBul.blockIndex].gridX - 1); i <= std::min(49, happyBlock[nowBul.blockIndex].gridX + 1); ++i)
+					for (int j = std::max(0, happyBlock[nowBul.blockIndex].gridY - 1); j <= std::min(49, happyBlock[nowBul.blockIndex].gridY + 1); ++j)
 						colorMap[i][j] = 1;
-				double angle = getPointToPointAngle(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
-				double distance = getPointToPointDistance(self->x, self->y, GridToCord(nowBul.nowX), GridToCord(nowBul.nowY));
+				double angle = getPointToPointAngle(self->x, self->y, GridToCord(happyBlock[nowBul.blockIndex].gridX), GridToCord(happyBlock[nowBul.blockIndex].gridY));
+				double distance = getPointToPointDistance(self->x, self->y, GridToCord(happyBlock[nowBul.blockIndex].gridX), GridToCord(happyBlock[nowBul.blockIndex].gridY));
 				int attackTime = int(distance / 12. + 0.5);
 				// printf("selfx %d, selfy %d \n", self->x/1000, self->y/1000);
-				printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
+				// printf("dMap mask: %d %d\n", nowBul.nowX, nowBul.nowY);
 				// printf("%d, %d aT: %d, angle : %f\n", dx, dy, attackTime, angle);
 				gameInfo->Attack(attackTime, angle);
-
-				tmp.pop();
+                changeNear();
 			}
             return;
 		}
@@ -1236,6 +1178,7 @@ Position findBestTarget()
     // Second to get items
     for (auto prop : props)
 	{
+        if (defaultMap[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)] > 0) continue;
 		double distance = distance_table[CordToGrid(prop.second.x)][CordToGrid(prop.second.y)];
 		if (distance < minDistance)
 		{
@@ -1273,7 +1216,7 @@ Position findBestTarget()
     }
 
     if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
-        canStepUnColored = true;
+        canStepUnColored = false;
     if (minDistance < MAX_DISTANCE + 1)
         return bestTarget;
 
@@ -1296,7 +1239,7 @@ Position findBestTarget()
         else if (nowBulletNum == self->maxBulletNum - 1) 
         {
             unColoredDistance = 2;
-            if (bulletRecoverTime / double(self->CD) > 0.2)
+            if (bulletRecoverTime / double(self->CD) > 0.2 && nowBulletNum != self->maxBulletNum)
                 canStepUnColored = false;
         }
         else
@@ -1315,22 +1258,15 @@ Position findBestTarget()
             if (bulletRecoverTime / double(self->CD) > 0.5)
                 canStepUnColored = false;
         }
-        else if (nowBulletNum > 3) 
-        {
-            unColoredDistance = 5;
-            if (bulletRecoverTime / double(self->CD) > 0.3)
-                canStepUnColored = false;
-        }
         else
         {
             unColoredDistance = 10;
-            if (bulletRecoverTime / double(self->CD) > 0.1)
-                canStepUnColored = false;
+            canStepUnColored = false;
         }
     }
 
     if (colorMap[nowPosition[0]][nowPosition[1]] != 1)
-        canStepUnColored = true;
+        canStepUnColored = false;
     bestTarget = finalTarget;
 
     // std::cout << "Min Distance 3: " << minDistance << std::endl;
@@ -1440,8 +1376,9 @@ void sendMessage()
 	}
 }
 
-void recieveMessage()
+void receiveMessage()
 {
+    if (isAct == true) return;
 	for (auto it = players.begin(); it != players.end();)
 	{
 		if (it->first < 0)
@@ -1550,7 +1487,7 @@ void AI::play(GameApi& g)
     attackAction();
     pickAction();
     sendMessage();
-	recieveMessage();
+	receiveMessage();
     avoidBullet();
     moveAction();
     updateEnd();
